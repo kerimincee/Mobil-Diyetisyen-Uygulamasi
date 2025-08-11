@@ -1,9 +1,7 @@
 import { Tabs } from 'expo-router';
-import React from 'react';
-import { Platform } from 'react-native';
+import { Image, Platform } from 'react-native';
 
-import { HapticTab } from '@/components/HapticTab';
-import { IconSymbol } from '@/components/ui/IconSymbol';
+import { CustomTabBarButton, HapticTab } from '@/components/HapticTab';
 import TabBarBackground from '@/components/ui/TabBarBackground';
 import { Colors } from '@/constants/Colors';
 import { useColorScheme } from '@/hooks/useColorScheme';
@@ -29,15 +27,46 @@ export default function TabLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          title: 'Home',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="house.fill" color={color} />,
+          title: 'Anasayfa',
+          tabBarIcon: ({ focused }) => (
+            <Image source={require('../../assets/images/anasayfa.png')} style={{ width: 34, height: 34, tintColor: focused ? '#5A7742' : '#B0B0B0' }} />
+          ),
         }}
       />
       <Tabs.Screen
-        name="explore"
+        name="BMI"
         options={{
-          title: 'Explore',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="paperplane.fill" color={color} />,
+          title: 'VKI Hesapla',
+          tabBarIcon: ({ focused }) => (
+            <Image source={require('../../assets/images/vkihesapla.png')} style={{ width: 34, height: 34, tintColor: focused ? '#5A7742' : '#B0B0B0' }} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="Chatbot"
+        options={{
+          title: 'Diyet Asistanı',
+          tabBarIcon: () => null, // Ortadaki özel buton, iconu CustomTabBarButton'da
+          tabBarButton: (props) => <CustomTabBarButton {...props} isCenter />,
+        }}
+      />
+
+      <Tabs.Screen
+        name="Kalori"
+        options={{
+          title: 'Kalori',
+          tabBarIcon: ({ focused }) => (
+            <Image source={require('../../assets/images/kalori.png')} style={{ width: 34, height: 34, tintColor: focused ? '#5A7742' : '#B0B0B0' }} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="Takvim"
+        options={{
+          title: 'Takvim',
+          tabBarIcon: ({ focused }) => (
+            <Image source={require('../../assets/images/takvim.png')} style={{ width: 34, height: 34, tintColor: focused ? '#5A7742' : '#B0B0B0' }} />
+          ),
         }}
       />
     </Tabs>
