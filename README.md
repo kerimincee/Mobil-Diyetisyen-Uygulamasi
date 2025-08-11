@@ -1,50 +1,284 @@
-# Welcome to your Expo app 👋
+# 🥗 DiyetApp - Akıllı Diyet Asistanı
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+<div align="center">
 
-## Get started
+![DiyetApp Logo](assets/images/icon.png)
 
-1. Install dependencies
+**Sağlıklı yaşam için geliştirilmiş kapsamlı diyet ve beslenme uygulaması**
 
+[![React Native](https://img.shields.io/badge/React%20Native-0.79.5-blue.svg)](https://reactnative.dev/)
+[![Expo](https://img.shields.io/badge/Expo-53.0.17-black.svg)](https://expo.dev/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.8.3-blue.svg)](https://www.typescriptlang.org/)
+[![Supabase](https://img.shields.io/badge/Supabase-2.50.5-green.svg)](https://supabase.com/)
+[![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+
+</div>
+
+---
+
+## 📱 Uygulama Özellikleri
+
+### 🏠 Ana Sayfa
+- **Kişiselleştirilmiş Karşılama**: Kullanıcı adına özel hoş geldin mesajları
+- **Motivasyonel İçerik**: Günlük değişen motivasyon mesajları
+- **Hızlı Erişim**: Tüm özelliklere kolay erişim
+- **Görsel Slider**: Diyetisyenlik ile ilgili görseller
+
+### 🧮 BMI Hesaplayıcı
+- **Vücut Kitle İndeksi Hesaplama**: Boy, kilo ve yaş bazlı hesaplama
+- **Görsel Sonuçlar**: Renkli kategoriler ve açıklamalar
+- **Kişiselleştirilmiş Öneriler**: BMI sonucuna göre sağlık tavsiyeleri
+- **Slider Kontrolleri**: Kolay kullanım için kaydırıcılar
+
+### 📸 AI Destekli Kalori Analizi
+- **Fotoğraf Analizi**: Yemek fotoğraflarından kalori tahmini
+- **Gemini AI Entegrasyonu**: Google'ın gelişmiş AI modeli
+- **Kamera ve Galeri Desteği**: Fotoğraf çekme ve seçme
+- **Otomatik Kaydetme**: Analiz edilen yemekleri veritabanına kaydetme
+
+### 🤖 Diyet Asistanı (Chatbot)
+- **AI Destekli Sohbet**: Beslenme konularında uzman tavsiyeler
+- **Markdown Desteği**: Zengin metin formatlaması
+- **Gerçek Zamanlı Yanıtlar**: Anında beslenme önerileri
+- **Kişiselleştirilmiş Deneyim**: Kullanıcı geçmişine dayalı öneriler
+
+### 📅 Diyet Takvimi
+- **Günlük Planlama**: Kahvaltı, öğle, akşam yemeği planları
+- **Ara Öğün Takibi**: Snack zamanları
+- **Görsel Takvim**: Planlanan günlerin işaretlenmesi
+- **Düzenleme ve Silme**: Mevcut planları güncelleme
+
+### 👤 Profil Yönetimi
+- **Kullanıcı Bilgileri**: Kişisel bilgileri düzenleme
+- **Hedef Belirleme**: Kilo hedefleri ve tercihler
+- **İstatistikler**: İlerleme takibi
+- **Güvenli Çıkış**: Oturum yönetimi
+
+---
+
+## 🛠️ Teknolojiler
+
+### Frontend
+- **React Native 0.79.5**: Cross-platform mobil uygulama geliştirme
+- **Expo 53.0.17**: Geliştirme platformu ve araçları
+- **TypeScript 5.8.3**: Tip güvenliği ve geliştirici deneyimi
+- **React Navigation 7.x**: Navigasyon yönetimi
+
+### Backend & Veritabanı
+- **Supabase 2.50.5**: Backend-as-a-Service platformu
+- **PostgreSQL**: Güçlü veritabanı sistemi
+- **Real-time Subscriptions**: Gerçek zamanlı veri güncellemeleri
+
+### AI & Makine Öğrenmesi
+- **Google Gemini AI**: Gelişmiş yapay zeka modeli
+- **Gemini Vision API**: Görsel analiz ve kalori tahmini
+- **Gemini 2.5 Pro**: Gelişmiş sohbet asistanı
+
+### UI/UX Kütüphaneleri
+- **Expo Vector Icons**: İkon kütüphanesi
+- **React Native Calendars**: Takvim bileşenleri
+- **Expo Linear Gradient**: Gradient efektleri
+- **React Native Markdown**: Zengin metin görüntüleme
+
+---
+
+## 🚀 Kurulum
+
+### Gereksinimler
+- Node.js (v18 veya üzeri)
+- npm veya yarn
+- Expo CLI
+- iOS Simulator (macOS) veya Android Emulator
+
+### Adım Adım Kurulum
+
+1. **Projeyi klonlayın**
+   ```bash
+   git clone https://github.com/kullaniciadi/DiyetApp.git
+   cd DiyetApp
+   ```
+
+2. **Bağımlılıkları yükleyin**
    ```bash
    npm install
    ```
 
-2. Start the app
+3. **Environment değişkenlerini ayarlayın**
+   ```bash
+   # .env dosyası oluşturun
+   EXPO_PUBLIC_SUPABASE_URL=your_supabase_url
+   EXPO_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+   GEMINI_API_KEY=your_gemini_api_key
+   ```
 
+4. **Uygulamayı başlatın**
    ```bash
    npx expo start
    ```
 
-In the output, you'll find options to open the app in a
+5. **Platform seçenekleri**
+   - **iOS Simulator**: `i` tuşuna basın
+   - **Android Emulator**: `a` tuşuna basın
+   - **Web**: `w` tuşuna basın
+   - **Expo Go**: QR kodu tarayın
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
+---
 
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
+## 📊 Veritabanı Şeması
 
-## Get a fresh project
-
-When you're ready, run:
-
-```bash
-npm run reset-project
+### Users Tablosu
+```sql
+CREATE TABLE users (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  eposta TEXT UNIQUE NOT NULL,
+  isim TEXT,
+  created_at TIMESTAMP DEFAULT NOW()
+);
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+### Diet Plans Tablosu
+```sql
+CREATE TABLE diet_plans (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID REFERENCES users(id),
+  date DATE NOT NULL,
+  breakfast TEXT,
+  snack1 TEXT,
+  lunch TEXT,
+  snack2 TEXT,
+  dinner TEXT,
+  created_at TIMESTAMP DEFAULT NOW()
+);
+```
 
-## Learn more
+### Meals Tablosu
+```sql
+CREATE TABLE meals (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID REFERENCES users(id),
+  meal_name TEXT NOT NULL,
+  calories INTEGER,
+  image_url TEXT,
+  created_at TIMESTAMP DEFAULT NOW()
+);
+```
 
-To learn more about developing your project with Expo, look at the following resources:
+---
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+## 🔧 Geliştirme
 
-## Join the community
+### Proje Yapısı
+```
+DiyetApp/
+├── app/                    # Ana uygulama dosyaları
+│   ├── (tabs)/            # Tab navigasyonu
+│   │   ├── index.tsx      # Ana sayfa
+│   │   ├── BMI.tsx        # BMI hesaplayıcı
+│   │   ├── Kalori.tsx     # Kalori analizi
+│   │   ├── Chatbot.tsx    # AI asistan
+│   │   └── Takvim.tsx     # Diyet takvimi
+│   ├── Profile.tsx        # Profil sayfası
+│   ├── GirisScreen.js     # Giriş ekranı
+│   └── Register.tsx       # Kayıt ekranı
+├── components/            # Yeniden kullanılabilir bileşenler
+├── services/             # API servisleri
+├── contexts/             # React Context'leri
+├── hooks/                # Custom React hooks
+├── constants/            # Sabitler
+└── assets/               # Görseller ve kaynaklar
+```
 
-Join our community of developers creating universal apps.
+### Kullanılabilir Scriptler
+```bash
+npm start          # Expo development server'ı başlat
+npm run android    # Android emulator'da çalıştır
+npm run ios        # iOS simulator'da çalıştır
+npm run web        # Web tarayıcısında çalıştır
+npm run lint       # ESLint ile kod kontrolü
+```
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+---
+
+## 🎨 Tasarım Sistemi
+
+### Renk Paleti
+- **Primary**: `#4B6C4B` (Yeşil)
+- **Secondary**: `#6b8e5e` (Açık Yeşil)
+- **Background**: `#ffffff` (Beyaz)
+- **Text**: `#333333` (Koyu Gri)
+- **Accent**: `#ff6b6b` (Kırmızı)
+
+### Tipografi
+- **Font Family**: Poppins
+- **Weights**: 400 (Regular), 600 (SemiBold), 700 (Bold)
+
+### Bileşenler
+- Modern ve minimal tasarım
+- Yuvarlatılmış köşeler
+- Gölge efektleri
+- Gradient arka planlar
+
+---
+
+## 🔒 Güvenlik
+
+- **Supabase Auth**: Güvenli kullanıcı kimlik doğrulama
+- **Row Level Security (RLS)**: Veritabanı güvenliği
+- **API Key Management**: Güvenli API anahtarı yönetimi
+- **Input Validation**: Kullanıcı girdisi doğrulama
+
+---
+
+## 📱 Platform Desteği
+
+- ✅ **iOS**: iPhone ve iPad
+- ✅ **Android**: Tüm Android cihazlar
+- ✅ **Web**: Modern web tarayıcıları
+
+---
+
+## 🤝 Katkıda Bulunma
+
+1. Bu repository'yi fork edin
+2. Feature branch oluşturun (`git checkout -b feature/AmazingFeature`)
+3. Değişikliklerinizi commit edin (`git commit -m 'Add some AmazingFeature'`)
+4. Branch'inizi push edin (`git push origin feature/AmazingFeature`)
+5. Pull Request oluşturun
+
+### Geliştirme Kuralları
+- TypeScript kullanın
+- ESLint kurallarına uyun
+- Test yazın
+- Dokümantasyon güncelleyin
+
+---
+
+## 📄 Lisans
+
+Bu proje MIT lisansı altında lisanslanmıştır. Detaylar için [LICENSE](LICENSE) dosyasına bakın.
+
+---
+
+## 📞 İletişim
+
+- **Geliştirici**: [Adınız]
+- **Email**: [email@example.com]
+- **LinkedIn**: [LinkedIn Profiliniz]
+- **GitHub**: [GitHub Profiliniz]
+
+---
+
+## 🙏 Teşekkürler
+
+- [Expo](https://expo.dev/) - Harika geliştirme platformu
+- [Supabase](https://supabase.com/) - Güçlü backend çözümü
+- [Google Gemini](https://ai.google.dev/) - Gelişmiş AI teknolojisi
+- [React Native](https://reactnative.dev/) - Cross-platform geliştirme
+
+---
+
+<div align="center">
+
+**⭐ Bu projeyi beğendiyseniz yıldız vermeyi unutmayın!**
+
+</div>
