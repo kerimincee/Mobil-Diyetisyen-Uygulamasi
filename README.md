@@ -2,7 +2,6 @@
 
 <div align="center">
 
-![DiyetApp Logo](assets/images/icon.png)
 
 **Sağlıklı yaşam için geliştirilmiş kapsamlı diyet ve beslenme uygulaması**
 
