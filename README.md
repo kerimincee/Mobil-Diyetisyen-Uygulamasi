@@ -93,7 +93,7 @@
 
 1. **Projeyi klonlayın**
    ```bash
-   git clone https://github.com/kullaniciadi/DiyetApp.git
+   git clone https://github.com/kerimincee/Mobil-Diyetisyen-Uygulamasi
    cd DiyetApp
    ```
 
@@ -260,10 +260,10 @@ Bu proje MIT lisansı altında lisanslanmıştır. Detaylar için [LICENSE](LICE
 
 ## 📞 İletişim
 
-- **Geliştirici**: [Adınız]
-- **Email**: [email@example.com]
-- **LinkedIn**: [LinkedIn Profiliniz]
-- **GitHub**: [GitHub Profiliniz]
+- **Geliştirici**: [Kerim Ince]
+- **Email**: [incekerim49@gmail.com]
+- **LinkedIn**: [https://www.linkedin.com/in/kerim-ince/]
+- **GitHub**: [https://github.com/kerimincee]
 
 ---
 
