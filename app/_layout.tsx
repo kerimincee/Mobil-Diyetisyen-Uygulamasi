@@ -24,7 +24,55 @@ export default function RootLayout() {
       <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
         <LoadingOverlay />
         <Stack initialRouteName="GirisScreen">
-          <Stack.Screen name="GirisScreen" options={{ title: 'Giriş Yap', headerBackTitle: 'Geri' }} />
+          <Stack.Screen name="GirisScreen" options={{ title: 'DiyetAPP', headerShown: false }} />
+          <Stack.Screen name="UserLogin" options={{ title: 'Kullanıcı Girişi', headerBackTitle: 'Geri' }} />
+          <Stack.Screen name="DieticianLogin" options={{ title: 'Diyetisyen Girişi', headerBackTitle: 'Geri' }} />
+          <Stack.Screen name="Register" options={{ title: 'Kayıt Ol', headerBackTitle: 'Giriş Yap' }} />
+          <Stack.Screen 
+            name="Profile" 
+            options={{ 
+              title: 'Profilim', 
+              headerBackTitle: 'Geri',
+              headerStyle: { backgroundColor: '#4B6C4B' },
+              headerTitleStyle: { color: '#fff', fontWeight: 'bold' },
+              headerTintColor: '#fff',
+              headerShadowVisible: false,
+            }} 
+          />
+          <Stack.Screen 
+            name="DieticianProfile" 
+            options={{ 
+              title: 'Diyetisyen Profili', 
+              headerBackTitle: 'Geri',
+              headerStyle: { backgroundColor: '#4B6C4B' },
+              headerTitleStyle: { color: '#fff', fontWeight: 'bold' },
+              headerTintColor: '#fff',
+              headerShadowVisible: false,
+            }} 
+          />
+          <Stack.Screen 
+            name="AddClient" 
+            options={{ 
+              title: 'Danışan Ekle', 
+              headerBackTitle: 'Geri',
+              headerStyle: { backgroundColor: '#4B6C4B' },
+              headerTitleStyle: { color: '#fff', fontWeight: 'bold' },
+              headerTintColor: '#fff',
+              headerShadowVisible: false,
+            }} 
+          />
+          <Stack.Screen 
+            name="ClientDetail" 
+            options={{ 
+              title: 'Danışan Detayı', 
+              headerBackTitle: 'Geri',
+              headerStyle: { backgroundColor: '#4B6C4B' },
+              headerTitleStyle: { color: '#fff', fontWeight: 'bold' },
+              headerTintColor: '#fff',
+              headerShadowVisible: false,
+            }} 
+          />
+          <Stack.Screen name="DiyetEkle" options={{ title: 'Diyet Ekle', headerBackTitle: 'Geri' }} />
           <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
           <Stack.Screen name="+not-found" />
         </Stack>

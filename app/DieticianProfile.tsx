@@ -2,23 +2,25 @@ import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { Alert, KeyboardAvoidingView, Modal, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Alert, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { useLoading } from '../contexts/LoadingContext';
+import { supabase } from '../supabaseClient';
 
-export default function ProfileScreen() {
+export default function DieticianProfileScreen() {
   const router = useRouter();
   const { setShowLoading, showLoading } = useLoading();
-  const [user, setUser] = useState<any>(null);
+  const [dietician, setDietician] = useState<any>(null);
   const [isim, setIsim] = useState('');
   const [soyisim, setSoyisim] = useState('');
   const [eposta, setEposta] = useState('');
   const [telefon, setTelefon] = useState('');
+  const [uzmanlik_alani, setUzmanlikAlani] = useState('');
+  const [deneyim_yili, setDeneyimYili] = useState('');
+  const [lisans_no, setLisansNo] = useState('');
+  const [mezun_oldugu_okul, setMezunOlduguOkul] = useState('');
   const [loading, setLoading] = useState(true);
   const [editModalVisible, setEditModalVisible] = useState(false);
-  const [editBoy, setEditBoy] = useState('');
-  const [editKilo, setEditKilo] = useState('');
-  const [editYas, setEditYas] = useState('');
-  const [profilePhoto, setProfilePhoto] = useState<string | null>(null);
+  const [clients, setClients] = useState<any[]>([]);
   const [showPasswordSection, setShowPasswordSection] = useState(false);
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
@@ -26,57 +28,91 @@ export default function ProfileScreen() {
   const [passwordLoading, setPasswordLoading] = useState(false);
 
   useEffect(() => {
-    const fetchUser = async () => {
+    const fetchDietician = async () => {
       setShowLoading(true);
-      const currentUser = await AsyncStorage.getItem('currentUser');
       const currentDiyetisyen = await AsyncStorage.getItem('currentDiyetisyen');
       
-      if (!currentUser && !currentDiyetisyen) {
+      if (!currentDiyetisyen) {
         setShowLoading(false);
         setLoading(false);
         router.replace('/GirisScreen');
         return;
       }
       
-      const userData = currentUser ? JSON.parse(currentUser) : (currentDiyetisyen ? JSON.parse(currentDiyetisyen) : null);
-      setUser(userData);
-      setIsim(userData.isim);
-      setSoyisim(userData.soyisim || '');
-      setEposta(userData.eposta);
-      setTelefon(userData.telefon || '');
-      setProfilePhoto(userData.profil_foto || null);
+      const dieticianData = JSON.parse(currentDiyetisyen);
+      setDietician(dieticianData);
+      setIsim(dieticianData.isim);
+      setSoyisim(dieticianData.soyisim || '');
+      setEposta(dieticianData.eposta);
+      setTelefon(dieticianData.telefon || '');
+      setUzmanlikAlani(dieticianData.uzmanlik_alani || '');
+      setDeneyimYili(dieticianData.deneyim_yili ? String(dieticianData.deneyim_yili) : '');
+      setLisansNo(dieticianData.lisans_no || '');
+      setMezunOlduguOkul(dieticianData.mezun_oldugu_okul || '');
+      
+      // Danışanları getir
+      await fetchClients(dieticianData.id);
+      
       setShowLoading(false);
       setLoading(false);
     };
-    fetchUser();
+    fetchDietician();
   }, []);
 
+  const fetchClients = async (dieticianId: string) => {
+    try {
+      const { data: clientsData, error } = await supabase
+        .from('users')
+        .select('*')
+        .eq('diyetisyen_id', dieticianId);
+
+      if (error) {
+        console.error('Danışanlar getirilirken hata:', error);
+      } else {
+        setClients(clientsData || []);
+      }
+    } catch (error) {
+      console.error('Danışanlar getirilirken hata:', error);
+    }
+  };
+
   const handleSave = async () => {
-    if (!user) return;
+    if (!dietician) return;
     if (!isim.trim() || !soyisim.trim() || !eposta.trim()) {
       Alert.alert('Hata', 'İsim, soyisim ve e-posta alanları boş bırakılamaz.');
       return;
     }
     
-    // Veritabanını güncellemek için Supabase import'u ekleyelim
-    const { supabase } = await import('../supabaseClient');
-    
-    // Diyetisyen mi kullanıcı mı kontrol et
-    const currentDiyetisyen = await AsyncStorage.getItem('currentDiyetisyen');
-    const tableName = currentDiyetisyen ? 'diyetisyenler' : 'users';
-    const storageKey = currentDiyetisyen ? 'currentDiyetisyen' : 'currentUser';
-    
     const { error } = await supabase
-      .from(tableName)
-      .update({ isim, soyisim, eposta, telefon })
-      .eq('id', user.id);
+      .from('diyetisyenler')
+      .update({ 
+        isim, 
+        soyisim, 
+        eposta, 
+        telefon,
+        uzmanlik_alani,
+        deneyim_yili: Number(deneyim_yili),
+        lisans_no,
+        mezun_oldugu_okul
+      })
+      .eq('id', dietician.id);
+      
     if (error) {
       Alert.alert('Hata', 'Profil güncellenirken bir hata oluştu.');
     } else {
-      const updatedUser = { ...user, isim, soyisim, eposta, telefon };
-      setUser(updatedUser);
-      await AsyncStorage.setItem(storageKey, JSON.stringify(updatedUser));
-      await AsyncStorage.setItem('rememberedEmail', eposta);
+      const updatedDietician = { 
+        ...dietician, 
+        isim, 
+        soyisim, 
+        eposta, 
+        telefon,
+        uzmanlik_alani,
+        deneyim_yili: Number(deneyim_yili),
+        lisans_no,
+        mezun_oldugu_okul
+      };
+      setDietician(updatedDietician);
+      await AsyncStorage.setItem('currentDiyetisyen', JSON.stringify(updatedDietician));
       Alert.alert('Başarılı', 'Profiliniz güncellendi.');
     }
   };
@@ -88,9 +124,6 @@ export default function ProfileScreen() {
       [
         { text: 'Hayır', style: 'cancel' },
         { text: 'Evet', style: 'destructive', onPress: async () => {
-            await AsyncStorage.removeItem('rememberedEmail');
-            await AsyncStorage.removeItem('rememberedPassword');
-            await AsyncStorage.removeItem('currentUser');
             await AsyncStorage.removeItem('currentDiyetisyen');
             await AsyncStorage.removeItem('userType');
             router.replace('/GirisScreen');
@@ -98,39 +131,6 @@ export default function ProfileScreen() {
         },
       ]
     );
-  };
-
-  // Modal açıldığında mevcut değerleri doldur
-  const openEditModal = () => {
-    setEditBoy(user?.boy ? String(user.boy) : '');
-    setEditKilo(user?.kilo ? String(user.kilo) : '');
-    setEditYas(user?.yas ? String(user.yas) : '');
-    setEditModalVisible(true);
-  };
-
-  const handleSavePhysical = async () => {
-    if (!user) return;
-    if (!editBoy || !editKilo || !editYas) {
-      Alert.alert('Hata', 'Boy, kilo ve yaş alanları boş bırakılamaz.');
-      return;
-    }
-    
-    // Veritabanını güncellemek için Supabase import'u ekleyelim
-    const { supabase } = await import('../supabaseClient');
-    
-    const { error } = await supabase
-      .from('users')
-      .update({ boy: Number(editBoy), kilo: Number(editKilo), yas: Number(editYas) })
-      .eq('id', user.id);
-    if (error) {
-      Alert.alert('Hata', 'Bilgiler güncellenirken bir hata oluştu.');
-    } else {
-      const updatedUser = { ...user, boy: Number(editBoy), kilo: Number(editKilo), yas: Number(editYas) };
-      setUser(updatedUser);
-      await AsyncStorage.setItem('currentUser', JSON.stringify(updatedUser));
-      setEditModalVisible(false);
-      Alert.alert('Başarılı', 'Boy, kilo ve yaş bilgileriniz güncellendi.');
-    }
   };
 
   const handlePasswordChange = async () => {
@@ -148,11 +148,8 @@ export default function ProfileScreen() {
     }
     setPasswordLoading(true);
     
-    // Veritabanını güncellemek için Supabase import'u ekleyelim
-    const { supabase } = await import('../supabaseClient');
-    
     // Mevcut şifre kontrolü
-    if (currentPassword !== user.sifre) {
+    if (currentPassword !== dietician.sifre) {
       setPasswordLoading(false);
       Alert.alert('Hata', 'Mevcut şifreniz yanlış.');
       return;
@@ -160,9 +157,9 @@ export default function ProfileScreen() {
     
     // Şifreyi güncelle
     const { error } = await supabase
-      .from('users')
+      .from('diyetisyenler')
       .update({ sifre: newPassword })
-      .eq('id', user.id);
+      .eq('id', dietician.id);
       
     if (error) {
       setPasswordLoading(false);
@@ -171,9 +168,9 @@ export default function ProfileScreen() {
     }
     
     // AsyncStorage'ı güncelle
-    const updatedUser = { ...user, sifre: newPassword };
-    await AsyncStorage.setItem('currentUser', JSON.stringify(updatedUser));
-    setUser(updatedUser);
+    const updatedDietician = { ...dietician, sifre: newPassword };
+    await AsyncStorage.setItem('currentDiyetisyen', JSON.stringify(updatedDietician));
+    setDietician(updatedDietician);
     
     setPasswordLoading(false);
     setShowPasswordSection(false);
@@ -209,6 +206,7 @@ export default function ProfileScreen() {
             <View style={styles.avatarContainer}>
               <Text style={styles.avatarText}>{getInitials(isim)}</Text>
             </View>
+            <Text style={styles.dieticianTitle}>Diyetisyen</Text>
           </View>
 
           <View style={styles.formContainer}>
@@ -216,14 +214,15 @@ export default function ProfileScreen() {
               <Text style={styles.label}>Ad</Text>
               <View style={styles.inputContainer}>
                 <Ionicons name="person-outline" style={styles.inputIcon} />
-                <TextInput style={styles.input} value={isim} onChangeText={setIsim} placeholder="Adınız" />
+                <TextInput style={styles.input} value={isim} onChangeText={setIsim} placeholder="Adınız" placeholderTextColor="#999" />
               </View>
             </View>
+            
             <View style={styles.inputGroup}>
               <Text style={styles.label}>Soyad</Text>
               <View style={styles.inputContainer}>
                 <Ionicons name="person-outline" style={styles.inputIcon} />
-                <TextInput style={styles.input} value={soyisim} onChangeText={setSoyisim} placeholder="Soyadınız" />
+                <TextInput style={styles.input} value={soyisim} onChangeText={setSoyisim} placeholder="Soyadınız" placeholderTextColor="#999" />
               </View>
             </View>
             
@@ -231,7 +230,7 @@ export default function ProfileScreen() {
               <Text style={styles.label}>E-posta</Text>
               <View style={styles.inputContainer}>
                 <Ionicons name="mail-outline" style={styles.inputIcon} />
-                <TextInput style={styles.input} value={eposta} onChangeText={setEposta} keyboardType="email-address" placeholder="E-posta adresiniz" />
+                <TextInput style={styles.input} value={eposta} onChangeText={setEposta} keyboardType="email-address" placeholder="E-posta adresiniz" placeholderTextColor="#999" />
               </View>
             </View>
 
@@ -243,7 +242,6 @@ export default function ProfileScreen() {
                   style={styles.input}
                   value={telefon}
                   onChangeText={(text) => {
-                    // Sadece rakamları al ve maksimum 11 karakter ile sınırla
                     const cleaned = text.replace(/[^0-9]/g, '');
                     if (cleaned.length <= 11) {
                       setTelefon(cleaned);
@@ -255,6 +253,87 @@ export default function ProfileScreen() {
                 />
               </View>
             </View>
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Uzmanlık Alanı</Text>
+              <View style={styles.inputContainer}>
+                <Ionicons name="medical-outline" style={styles.inputIcon} />
+                <TextInput style={styles.input} value={uzmanlik_alani} onChangeText={setUzmanlikAlani} placeholder="Uzmanlık alanınız" placeholderTextColor="#999" />
+              </View>
+            </View>
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Deneyim Yılı</Text>
+              <View style={styles.inputContainer}>
+                <Ionicons name="time-outline" style={styles.inputIcon} />
+                <TextInput 
+                  style={styles.input} 
+                  value={deneyim_yili} 
+                  onChangeText={setDeneyimYili} 
+                  keyboardType="number-pad"
+                  placeholder="Deneyim yılınız" 
+                  placeholderTextColor="#999"
+                />
+              </View>
+            </View>
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Lisans Numarası</Text>
+              <View style={styles.inputContainer}>
+                <Ionicons name="card-outline" style={styles.inputIcon} />
+                <TextInput style={styles.input} value={lisans_no} onChangeText={setLisansNo} placeholder="Lisans numaranız" placeholderTextColor="#999" />
+              </View>
+            </View>
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Mezun Olduğu Okul</Text>
+              <View style={styles.inputContainer}>
+                <Ionicons name="school-outline" style={styles.inputIcon} />
+                <TextInput style={styles.input} value={mezun_oldugu_okul} onChangeText={setMezunOlduguOkul} placeholder="Mezun olduğunuz okul" placeholderTextColor="#999" />
+              </View>
+            </View>
+          </View>
+
+          {/* Danışanlar Bölümü */}
+          <View style={styles.clientsSection}>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>Danışanlarım ({clients.length})</Text>
+              <TouchableOpacity 
+                style={styles.addClientButton}
+                onPress={() => router.push('/AddClient')}
+              >
+                <Ionicons name="add-outline" size={20} color="#fff" />
+                <Text style={styles.addClientButtonText}>Danışan Ekle</Text>
+              </TouchableOpacity>
+            </View>
+            {clients.length > 0 ? (
+              clients.map((client, index) => (
+                <View key={client.id} style={styles.clientCard}>
+                  <View style={styles.clientInfo}>
+                    <Text style={styles.clientName}>{client.isim} {client.soyisim}</Text>
+                    <Text style={styles.clientEmail}>{client.eposta}</Text>
+                  </View>
+                  <TouchableOpacity 
+                    style={styles.viewClientButton}
+                    onPress={() => router.push(`/ClientDetail?clientId=${client.id}`)}
+                  >
+                    <Ionicons name="eye-outline" size={20} color="#4B6C4B" />
+                  </TouchableOpacity>
+                </View>
+              ))
+            ) : (
+              <View style={styles.noClientsCard}>
+                <Ionicons name="people-outline" size={40} color="#ccc" />
+                <Text style={styles.noClientsText}>Henüz danışanınız bulunmuyor</Text>
+                <TouchableOpacity 
+                  style={styles.addFirstClientButton}
+                  onPress={() => router.push('/AddClient')}
+                >
+                  <Ionicons name="add-outline" size={16} color="#4B6C4B" />
+                  <Text style={styles.addFirstClientButtonText}>İlk Danışanınızı Ekleyin</Text>
+                </TouchableOpacity>
+              </View>
+            )}
           </View>
           
           <View style={styles.buttonGroup}>
@@ -262,14 +341,17 @@ export default function ProfileScreen() {
               <Ionicons name="save-outline" size={20} color="#fff" />
               <Text style={styles.buttonText}>Değişiklikleri Kaydet</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={[styles.saveButton, {backgroundColor: '#fff', borderWidth: 1, borderColor: '#4B6C4B'}]} onPress={openEditModal}>
-              <Ionicons name="create-outline" size={20} color="#4B6C4B" />
-              <Text style={[styles.buttonText, {color: '#4B6C4B'}]}>Boy / Kilo / Yaş Değiştir</Text>
-            </TouchableOpacity>
+            
             <TouchableOpacity style={[styles.saveButton, {backgroundColor: '#fff', borderWidth: 1, borderColor: '#4B6C4B'}]} onPress={() => setShowPasswordSection(v => !v)}>
               <Ionicons name="key-outline" size={20} color="#4B6C4B" />
               <Text style={[styles.buttonText, {color: '#4B6C4B'}]}>Şifreyi Değiştir</Text>
             </TouchableOpacity>
+
+            <TouchableOpacity style={[styles.saveButton, {backgroundColor: '#fff', borderWidth: 1, borderColor: '#4B6C4B'}]} onPress={handleLogout}>
+              <Ionicons name="log-out-outline" size={20} color="#4B6C4B" />
+              <Text style={[styles.buttonText, {color: '#4B6C4B'}]}>Çıkış Yap</Text>
+            </TouchableOpacity>
+
             {showPasswordSection && (
               <View style={{ width: '100%', backgroundColor: '#F6F7FB', borderRadius: 12, padding: 16, marginTop: 10 }}>
                 <Text style={{ color: '#4B6C4B', fontWeight: 'bold', fontSize: 16, marginBottom: 10 }}>Şifre Değiştir</Text>
@@ -305,56 +387,6 @@ export default function ProfileScreen() {
             )}
           </View>
         </ScrollView>
-        <Modal
-          visible={editModalVisible}
-          animationType="slide"
-          transparent
-          onRequestClose={() => setEditModalVisible(false)}
-        >
-          <View style={{flex:1, justifyContent:'center', alignItems:'center', backgroundColor:'rgba(0,0,0,0.2)'}}>
-            <View style={{backgroundColor:'#fff', borderRadius:20, padding:24, width:'85%', alignItems:'center'}}>
-              <Text style={{fontSize:18, fontWeight:'bold', color:'#4B6C4B', marginBottom:16}}>Boy / Kilo / Yaş Bilgilerini Düzenle</Text>
-              <View style={{width:'100%', marginBottom:12}}>
-                <Text style={{color:'#4B6C4B', marginBottom:4}}>Boy (cm)</Text>
-                <TextInput
-                  style={{borderWidth:1, borderColor:'#4B6C4B', borderRadius:8, padding:8, fontSize:16, color:'#333'}} 
-                  value={editBoy}
-                  onChangeText={setEditBoy}
-                  keyboardType="number-pad"
-                  maxLength={3}
-                />
-              </View>
-              <View style={{width:'100%', marginBottom:12}}>
-                <Text style={{color:'#4B6C4B', marginBottom:4}}>Kilo (kg)</Text>
-                <TextInput
-                  style={{borderWidth:1, borderColor:'#4B6C4B', borderRadius:8, padding:8, fontSize:16, color:'#333'}} 
-                  value={editKilo}
-                  onChangeText={setEditKilo}
-                  keyboardType="number-pad"
-                  maxLength={3}
-                />
-              </View>
-              <View style={{width:'100%', marginBottom:20}}>
-                <Text style={{color:'#4B6C4B', marginBottom:4}}>Yaş</Text>
-                <TextInput
-                  style={{borderWidth:1, borderColor:'#4B6C4B', borderRadius:8, padding:8, fontSize:16, color:'#333'}} 
-                  value={editYas}
-                  onChangeText={setEditYas}
-                  keyboardType="number-pad"
-                  maxLength={3}
-                />
-              </View>
-              <View style={{flexDirection:'row', justifyContent:'space-between', width:'100%'}}>
-                <TouchableOpacity style={{flex:1, backgroundColor:'#4B6C4B', padding:12, borderRadius:8, marginRight:8, alignItems:'center'}} onPress={handleSavePhysical}>
-                  <Text style={{color:'#fff', fontWeight:'bold', fontSize:16}}>Kaydet</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={{flex:1, backgroundColor:'#eee', padding:12, borderRadius:8, marginLeft:8, alignItems:'center'}} onPress={()=>setEditModalVisible(false)}>
-                  <Text style={{color:'#4B6C4B', fontWeight:'bold', fontSize:16}}>İptal</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-          </View>
-        </Modal>
       </KeyboardAvoidingView>
     </>
   );
@@ -370,7 +402,7 @@ const styles = StyleSheet.create({
   },
   header: {
     backgroundColor: '#4B6C4B',
-    paddingTop: 20,
+    paddingTop: 80,
     paddingBottom: 40,
     alignItems: 'center',
     borderBottomLeftRadius: 30,
@@ -391,12 +423,18 @@ const styles = StyleSheet.create({
     fontSize: 40,
     fontWeight: 'bold',
   },
+  dieticianTitle: {
+    color: '#fff',
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginTop: 10,
+  },
   formContainer: {
     backgroundColor: '#fff',
     borderRadius: 20,
     padding: 25,
     marginHorizontal: 20,
-    marginTop: -20, // azaltıldı
+    marginTop: -20,
     shadowColor: '#4B6C4B',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.07,
@@ -437,6 +475,95 @@ const styles = StyleSheet.create({
     paddingHorizontal: 0,
     backgroundColor: 'transparent',
   },
+  clientsSection: {
+    backgroundColor: '#fff',
+    borderRadius: 20,
+    padding: 25,
+    marginHorizontal: 20,
+    marginTop: 20,
+    shadowColor: '#4B6C4B',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.07,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 15,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#4B6C4B',
+  },
+  addClientButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#4B6C4B',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+  },
+  addClientButtonText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '600',
+    marginLeft: 5,
+  },
+  clientCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 12,
+    paddingHorizontal: 15,
+    backgroundColor: '#f6f7fb',
+    borderRadius: 10,
+    marginBottom: 10,
+  },
+  clientInfo: {
+    flex: 1,
+  },
+  clientName: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#333',
+  },
+  clientEmail: {
+    fontSize: 14,
+    color: '#666',
+    marginTop: 2,
+  },
+  viewClientButton: {
+    padding: 8,
+  },
+  noClientsCard: {
+    alignItems: 'center',
+    paddingVertical: 30,
+  },
+  noClientsText: {
+    color: '#999',
+    fontSize: 16,
+    marginTop: 10,
+    marginBottom: 15,
+  },
+  addFirstClientButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#E6F0E6',
+    paddingHorizontal: 15,
+    paddingVertical: 10,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#4B6C4B',
+  },
+  addFirstClientButtonText: {
+    color: '#4B6C4B',
+    fontSize: 14,
+    fontWeight: '600',
+    marginLeft: 5,
+  },
   buttonGroup: {
     paddingHorizontal: 20,
     marginTop: 30,
@@ -456,23 +583,10 @@ const styles = StyleSheet.create({
     shadowRadius: 6,
     elevation: 2,
   },
-  logoutButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#fff',
-    paddingVertical: 15,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#4B6C4B',
-  },
   buttonText: {
     color: '#fff',
     fontSize: 17,
     fontWeight: 'bold',
     marginLeft: 10,
   },
-  logoutButtonText: {
-    color: '#4B6C4B',
-  },
-}); 
+});

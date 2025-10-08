@@ -1,219 +1,250 @@
 import { Ionicons } from '@expo/vector-icons';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Stack, useRouter } from 'expo-router';
-import { useEffect, useState } from 'react';
 import {
-  Image,
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
+    Image,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View
 } from 'react-native';
-import { supabase } from '../supabaseClient';
 
 export default function LoginScreen() {
   const router = useRouter();
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [isPasswordVisible, setPasswordVisible] = useState(false);
-  const [rememberMe, setRememberMe] = useState(false);
 
-  useEffect(() => {
-    // AsyncStorage'da email ve şifre varsa otomatik giriş
-    const checkRememberedUser = async () => {
-      const rememberedEmail = await AsyncStorage.getItem('rememberedEmail');
-      const rememberedPassword = await AsyncStorage.getItem('rememberedPassword');
-      if (rememberedEmail && rememberedPassword) {
-        const { error } = await supabase.auth.signInWithPassword({
-          email: rememberedEmail,
-          password: rememberedPassword,
-        });
-        if (!error) {
-          router.replace('/');
-        }
-      }
-    };
-    checkRememberedUser();
-  }, []);
+  const handleUserLogin = () => {
+    router.push('/UserLogin');
+  };
 
-  const handleLogin = async () => {
-    if (!email || !password) {
-      alert('Lütfen e-posta ve şifre giriniz.');
-      return;
-    }
-    // 1. Supabase Auth ile giriş yap
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
-    if (error) {
-      if (error.message.toLowerCase().includes('invalid login credentials')) {
-        alert('E-posta veya şifre yanlış.');
-      } else {
-        alert('Giriş sırasında bir hata oluştu: ' + error.message);
-      }
-      return;
-    }
-    // 2. Auth başarılıysa, kendi users tablosundan kullanıcıyı çek
-    const authUserId = data.user?.id;
-    const { data: userData, error: userError } = await supabase
-      .from('users')
-      .select('*')
-      .eq('id', authUserId)
-      .single();
-    if (userError || !userData) {
-      alert('Kullanıcı bilgileri bulunamadı. Lütfen tekrar kayıt olun.');
-      return;
-    }
-    // 3. Giriş başarılı, rememberMe ise kaydet
-    if (rememberMe) {
-      await AsyncStorage.setItem('rememberedEmail', email);
-      await AsyncStorage.setItem('rememberedPassword', password);
-    } else {
-      await AsyncStorage.removeItem('rememberedEmail');
-      await AsyncStorage.removeItem('rememberedPassword');
-    }
-    router.replace('/');
+  const handleDieticianLogin = () => {
+    router.push('/DieticianLogin');
   };
 
   return (
     <>
       <Stack.Screen
         options={{
-          title: 'Giriş Yap',
-          headerBackTitle: 'Geri',
+          title: 'DiyetAPP',
+          headerShown: false,
         }}
       />
-      <KeyboardAvoidingView
-        style={{ flex: 1, backgroundColor: '#fff' }}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      >
-        <ScrollView
-          contentContainerStyle={styles.container}
-          keyboardShouldPersistTaps="handled"
-        >
+      <View style={styles.container}>
+        {/* Logo ve Başlık */}
+        <View style={styles.header}>
           <Image source={require('../assets/images/logo.png')} style={styles.logo} />
-          <Text style={styles.title}>Giriş Yap</Text>
-          <Text style={styles.subtitle}>Hesabınıza giriş yapın</Text>
+          <Text style={styles.title}>DiyetAPP'e Hoş Geldiniz</Text>
+          <Text style={styles.subtitle}>Hesap türünüzü seçin</Text>
+        </View>
 
-          <View style={styles.inputContainer}>
-            <Ionicons name="mail-outline" size={22} color="#6C6C6C" style={styles.inputIcon} />
-            <TextInput
-              style={styles.input}
-              placeholder="E-posta"
-              value={email}
-              onChangeText={setEmail}
-              keyboardType="email-address"
-              autoCapitalize="none"
-            />
-          </View>
-
-          <View style={styles.inputContainer}>
-            <Ionicons name="lock-closed-outline" size={22} color="#6C6C6C" style={styles.inputIcon} />
-            <TextInput
-              style={styles.input}
-              placeholder="Şifre"
-              value={password}
-              onChangeText={setPassword}
-              secureTextEntry={!isPasswordVisible}
-            />
-            <TouchableOpacity onPress={() => setPasswordVisible(!isPasswordVisible)}>
-              <Ionicons name={isPasswordVisible ? "eye-off-outline" : "eye-outline"} size={22} color="#6C6C6C" />
-            </TouchableOpacity>
-          </View>
-          
-          <View style={{ flexDirection: 'row', alignItems: 'center', alignSelf: 'flex-start', marginLeft: 15, marginBottom: 5 }}>
-            <TouchableOpacity onPress={() => setRememberMe(!rememberMe)} style={{ marginRight: 8 }}>
-              <Ionicons name={rememberMe ? 'checkbox' : 'square-outline'} size={22} color="#007AFF" />
-            </TouchableOpacity>
-            <Text style={{ color: '#333', fontSize: 16 }}>Beni Hatırla</Text>
-          </View>
-          
-          <TouchableOpacity style={styles.button} onPress={handleLogin}>
-            <Text style={styles.buttonText}>Giriş Yap</Text>
-          </TouchableOpacity>
-          
-          <TouchableOpacity onPress={() => router.push('/Register')}>
-            <Text style={styles.registerText}>
-              Hesabın yok mu? <Text style={{fontWeight: 'bold'}}>Kayıt ol</Text>
-            </Text>
+        {/* Ana İçerik - İki Bölüm */}
+        <View style={styles.mainContent}>
+          {/* Sol Taraf - Kullanıcı */}
+          <TouchableOpacity style={styles.userSection} onPress={handleUserLogin} activeOpacity={0.8}>
+            <View style={styles.imageContainer}>
+              <Image 
+                source={require('../assets/images/profil.png')} 
+                style={styles.userImage}
+                resizeMode="cover"
+              />
+              <View style={styles.imageOverlay}>
+                <Ionicons name="person" size={40} color="#fff" />
+              </View>
+            </View>
+            <Text style={styles.sectionTitle}>Kullanıcı</Text>
+            <Text style={styles.sectionDescription}>Diyet takibi ve sağlıklı yaşam</Text>
+            <View style={styles.loginButton}>
+              <Text style={styles.buttonText}>Giriş Yap</Text>
+              <Ionicons name="arrow-forward" size={20} color="#fff" style={{ marginLeft: 8 }} />
+            </View>
           </TouchableOpacity>
 
-        </ScrollView>
-      </KeyboardAvoidingView>
+          {/* Orta Ayırıcı */}
+          <View style={styles.divider}>
+            <View style={styles.dividerLine} />
+            <Text style={styles.dividerText}>VEYA</Text>
+            <View style={styles.dividerLine} />
+          </View>
+
+          {/* Sağ Taraf - Diyetisyen */}
+          <TouchableOpacity style={styles.dieticianSection} onPress={handleDieticianLogin} activeOpacity={0.8}>
+            <View style={styles.imageContainer}>
+              <Image 
+                source={require('../assets/images/diyetasistani.png')} 
+                style={styles.dieticianImage}
+                resizeMode="cover"
+              />
+              <View style={styles.imageOverlay}>
+                <Ionicons name="medical" size={40} color="#fff" />
+              </View>
+            </View>
+            <Text style={styles.sectionTitle}>Diyetisyen</Text>
+            <Text style={styles.sectionDescription}>Profesyonel diyet danışmanlığı</Text>
+            <View style={styles.loginButton}>
+              <Text style={styles.buttonText}>Giriş Yap</Text>
+              <Ionicons name="arrow-forward" size={20} color="#fff" style={{ marginLeft: 8 }} />
+            </View>
+          </TouchableOpacity>
+        </View>
+
+        {/* Alt Bilgi */}
+        <View style={styles.footer}>
+          <Text style={styles.footerText}>Sağlıklı yaşam için DiyetAPP</Text>
+        </View>
+      </View>
     </>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
-    flexGrow: 1,
-    justifyContent: 'flex-start',
+    flex: 1,
+    backgroundColor: '#F8FAF7',
+  },
+  header: {
     alignItems: 'center',
-    padding: 20,
-    paddingTop: 50,
-    backgroundColor: '#fff',
+    paddingTop: 80,
+    paddingBottom: 40,
   },
   logo: {
-    width: 150,
-    height: 150,
+    width: 100,
+    height: 100,
     resizeMode: 'contain',
     marginBottom: 20,
   },
   title: {
     fontSize: 28,
     fontWeight: 'bold',
-    color: '#333',
+    color: '#4B6C4B',
     marginBottom: 8,
+    textAlign: 'center',
   },
   subtitle: {
     fontSize: 16,
-    color: 'gray',
-    marginBottom: 30,
+    color: '#666',
+    textAlign: 'center',
   },
-  inputContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    width: '100%',
-    height: 50,
-    backgroundColor: '#F7F7F7',
-    borderRadius: 10,
-    paddingHorizontal: 15,
-    marginBottom: 15,
-  },
-  inputIcon: {
-    marginRight: 10,
-  },
-  input: {
+  mainContent: {
     flex: 1,
-    fontSize: 16,
+    flexDirection: 'row',
+    paddingHorizontal: 20,
+    paddingBottom: 40,
   },
-  button: {
-    width: '100%',
-    height: 50,
-    backgroundColor: '#4B6C4B',
-    borderRadius: 10,
+  userSection: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#fff',
+    borderRadius: 20,
+    marginRight: 10,
+    padding: 20,
+    shadowColor: '#4B6C4B',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    elevation: 8,
+  },
+  dieticianSection: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#fff',
+    borderRadius: 20,
+    marginLeft: 10,
+    padding: 20,
+    shadowColor: '#4B6C4B',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    elevation: 8,
+  },
+  imageContainer: {
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    marginBottom: 20,
+    position: 'relative',
+    overflow: 'hidden',
+    backgroundColor: '#E6F0E6',
     justifyContent: 'center',
     alignItems: 'center',
-    marginTop: 10,
-    elevation: 2,
-    shadowColor: '#000',
+  },
+  userImage: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 60,
+  },
+  dieticianImage: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 60,
+  },
+  imageOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(75, 108, 75, 0.3)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderRadius: 60,
+  },
+  sectionTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#4B6C4B',
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  sectionDescription: {
+    fontSize: 14,
+    color: '#666',
+    textAlign: 'center',
+    marginBottom: 20,
+    lineHeight: 20,
+  },
+  loginButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#4B6C4B',
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 25,
+    shadowColor: '#4B6C4B',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.2,
-    shadowRadius: 2,
+    shadowRadius: 6,
+    elevation: 4,
   },
   buttonText: {
     color: '#fff',
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: 'bold',
   },
-  registerText: {
-    marginTop: 20,
-    color: 'gray',
-    fontSize: 16,
+  divider: {
+    width: 60,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginHorizontal: 10,
+  },
+  dividerLine: {
+    width: 2,
+    height: 60,
+    backgroundColor: '#E0E0E0',
+    marginVertical: 5,
+  },
+  dividerText: {
+    fontSize: 12,
+    color: '#999',
+    fontWeight: 'bold',
+    marginVertical: 5,
+  },
+  footer: {
+    alignItems: 'center',
+    paddingBottom: 30,
+  },
+  footerText: {
+    fontSize: 14,
+    color: '#999',
+    textAlign: 'center',
   },
 }); 

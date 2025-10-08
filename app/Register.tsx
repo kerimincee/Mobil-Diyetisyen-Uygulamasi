@@ -29,11 +29,29 @@ export default function RegisterScreen() {
   const [cinsiyet, setCinsiyet] = useState<'erkek' | 'kadın'>('erkek');
 
   const formatPhone = (text: string) => {
-    let cleaned = text.replace(/\D/g, '').slice(0, 11);
-    if (!cleaned.startsWith('0')) cleaned = '0' + cleaned;
-    let formatted = cleaned;
-    if (cleaned.length > 3) formatted = cleaned.slice(0, 4) + ' ' + cleaned.slice(4);
-    if (cleaned.length > 6) formatted = formatted.slice(0, 8) + ' ' + formatted.slice(8);
+    // Remove all non-digit characters
+    const cleaned = text.replace(/\D/g, '');
+    
+    // Limit to 11 digits
+    const limited = cleaned.slice(0, 11);
+    
+    // Format the phone number
+    let formatted = limited;
+    if (limited.length > 0) {
+      // Ensure it starts with 0
+      if (!limited.startsWith('0')) {
+        formatted = '0' + limited;
+      }
+      
+      // Add spaces for formatting
+      if (formatted.length > 4) {
+        formatted = formatted.slice(0, 4) + ' ' + formatted.slice(4);
+      }
+      if (formatted.length > 8) {
+        formatted = formatted.slice(0, 8) + ' ' + formatted.slice(8);
+      }
+    }
+    
     return formatted;
   };
 
@@ -42,6 +60,15 @@ export default function RegisterScreen() {
     const hasNumber = /[0-9]/.test(pw);
     return pw.length >= 8 && hasLetter && hasNumber;
   };
+
+  // Şifre hash fonksiyonu - artık kullanılmıyor (düz metin olarak kaydediliyor)
+  // const hashPassword = async (password: string): Promise<string> => {
+  //   const hash = await Crypto.digestStringAsync(
+  //     Crypto.CryptoDigestAlgorithm.SHA256,
+  //     password
+  //   );
+  //   return hash;
+  // };
 
   const handleRegister = async () => {
     if (!isim || !soyisim || !eposta || !telefon || !sifre || !boy || !kilo || !yas || !cinsiyet) {
@@ -57,37 +84,45 @@ export default function RegisterScreen() {
       Alert.alert('Hata', 'Şifre en az 8 karakter olmalı ve harf ile sayı içermelidir.');
       return;
     }
-    // Önce Supabase Auth ile kayıt
-    const { error: authError, data } = await supabase.auth.signUp({
-      email: eposta,
-      password: sifre,
-    });
-    if (authError) {
-      if (authError.message.toLowerCase().includes('user already registered')) {
-        Alert.alert('Hata', 'Bu e-posta ile zaten bir hesap var.');
-      } else {
-        Alert.alert('Hata', 'Kayıt sırasında hata oluştu: ' + authError.message);
-      }
+
+    console.log('Kayıt işlemi başladı');
+    console.log('E-posta:', eposta);
+    console.log('Şifre:', sifre);
+
+    // Önce e-posta adresinin zaten kayıtlı olup olmadığını kontrol et
+    const { data: existingUser, error: checkError } = await supabase
+      .from('users')
+      .select('eposta')
+      .eq('eposta', eposta)
+      .single();
+
+    if (existingUser) {
+      Alert.alert('Hata', 'Bu e-posta ile zaten bir hesap var.');
       return;
     }
-    // Auth başarılıysa, users tablosuna Auth user id ile ekle
-    const authUserId = data.user?.id;
+
+    console.log('Şifre (düz metin):', sifre);
+
+    // Users tablosuna direkt kayıt (şifre hash olmadan)
     const { error: dbError } = await supabase.from('users').insert({
-      id: authUserId,
       isim,
       soyisim,
       eposta,
-      sifre,
+      sifre: sifre, // Düz metin şifre
       boy: Number(boy),
       kilo: Number(kilo),
       yas: Number(yas),
       cinsiyet,
       telefon
     });
+
     if (dbError) {
-      Alert.alert('Hata', 'Kullanıcı veritabanına eklenirken hata oluştu: ' + dbError.message);
+      console.error('Veritabanı hatası:', dbError);
+      Alert.alert('Hata', 'Kayıt sırasında hata oluştu: ' + dbError.message);
       return;
     }
+
+    console.log('Kayıt başarılı!');
     Alert.alert('Başarılı', 'Kayıt başarılı! Giriş yapabilirsiniz.', [
       { text: 'Tamam', onPress: () => router.replace('/GirisScreen') }
     ]);
@@ -115,17 +150,17 @@ export default function RegisterScreen() {
 
           <View style={styles.inputContainer}>
             <Ionicons name="person-outline" size={22} color="#6C6C6C" style={styles.inputIcon} />
-            <TextInput style={styles.input} placeholder="İsim" value={isim} onChangeText={setIsim} />
+            <TextInput style={styles.input} placeholder="İsim" placeholderTextColor="#999" value={isim} onChangeText={setIsim} />
           </View>
           
           <View style={styles.inputContainer}>
             <Ionicons name="person-outline" size={22} color="#6C6C6C" style={styles.inputIcon} />
-            <TextInput style={styles.input} placeholder="Soyisim" value={soyisim} onChangeText={setSoyisim} />
+            <TextInput style={styles.input} placeholder="Soyisim" placeholderTextColor="#999" value={soyisim} onChangeText={setSoyisim} />
           </View>
 
           <View style={styles.inputContainer}>
             <Ionicons name="mail-outline" size={22} color="#6C6C6C" style={styles.inputIcon} />
-            <TextInput style={styles.input} placeholder="E-posta" value={eposta} onChangeText={setEposta} keyboardType="email-address" autoCapitalize="none" />
+            <TextInput style={styles.input} placeholder="E-posta" placeholderTextColor="#999" value={eposta} onChangeText={setEposta} keyboardType="email-address" autoCapitalize="none" />
           </View>
 
           <View style={styles.inputContainer}>
@@ -133,16 +168,16 @@ export default function RegisterScreen() {
             <TextInput
               style={styles.input}
               placeholder="Telefon"
+              placeholderTextColor="#999"
               value={telefon}
               onChangeText={text => setTelefon(formatPhone(text))}
               keyboardType="number-pad"
-              maxLength={13}
             />
           </View>
           
           <View style={styles.inputContainer}>
             <Ionicons name="lock-closed-outline" size={22} color="#6C6C6C" style={styles.inputIcon} />
-            <TextInput style={styles.input} placeholder="Şifre" value={sifre} onChangeText={setSifre} secureTextEntry={!isPasswordVisible} />
+            <TextInput style={styles.input} placeholder="Şifre" placeholderTextColor="#999" value={sifre} onChangeText={setSifre} secureTextEntry={!isPasswordVisible} />
             <TouchableOpacity onPress={() => setPasswordVisible(!isPasswordVisible)}>
               <Ionicons name={isPasswordVisible ? "eye-off-outline" : "eye-outline"} size={22} color="#6C6C6C" />
             </TouchableOpacity>
@@ -153,6 +188,7 @@ export default function RegisterScreen() {
             <TextInput
               style={styles.input}
               placeholder="Boy (cm)"
+              placeholderTextColor="#999"
               value={boy}
               onChangeText={setBoy}
               keyboardType="number-pad"
@@ -164,6 +200,7 @@ export default function RegisterScreen() {
             <TextInput
               style={styles.input}
               placeholder="Kilo (kg)"
+              placeholderTextColor="#999"
               value={kilo}
               onChangeText={setKilo}
               keyboardType="number-pad"
@@ -175,6 +212,7 @@ export default function RegisterScreen() {
             <TextInput
               style={styles.input}
               placeholder="Yaş"
+              placeholderTextColor="#999"
               value={yas}
               onChangeText={setYas}
               keyboardType="number-pad"

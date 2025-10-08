@@ -1,4 +1,6 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Tabs } from 'expo-router';
+import { useEffect, useState } from 'react';
 import { Image, Platform } from 'react-native';
 
 import { CustomTabBarButton, HapticTab } from '@/components/HapticTab';
@@ -8,6 +10,19 @@ import { useColorScheme } from '@/hooks/useColorScheme';
 
 export default function TabLayout() {
   const colorScheme = useColorScheme();
+  const [userType, setUserType] = useState<string>('');
+
+  useEffect(() => {
+    const checkUserType = async () => {
+      try {
+        const type = await AsyncStorage.getItem('userType');
+        setUserType(type || '');
+      } catch (error) {
+        console.error('User type check failed:', error);
+      }
+    };
+    checkUserType();
+  }, []);
 
   return (
     <Tabs
@@ -36,7 +51,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="BMI"
         options={{
-          title: 'VKI Hesapla',
+          title: userType === 'dietician' ? 'Randevular' : 'VKI Hesapla',
           tabBarIcon: ({ focused }) => (
             <Image source={require('../../assets/images/vkihesapla.png')} style={{ width: 34, height: 34, tintColor: focused ? '#5A7742' : '#B0B0B0' }} />
           ),
