@@ -1,21 +1,23 @@
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Stack, useRouter } from 'expo-router';
+import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import {
-    Image,
-    KeyboardAvoidingView,
-    Linking,
-    Modal,
-    Platform,
-    Pressable,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View
+  Image,
+  KeyboardAvoidingView,
+  Linking,
+  Modal,
+  Platform,
+  Pressable,
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View
 } from 'react-native';
+import { checkDiyetisyenLogin } from '../services/dieticianService';
 import { supabase } from '../supabaseClient';
 
 export default function DieticianLoginScreen() {
@@ -23,6 +25,7 @@ export default function DieticianLoginScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isPasswordVisible, setPasswordVisible] = useState(false);
+  const [rememberMe, setRememberMe] = useState(false);
   const [contactModalVisible, setContactModalVisible] = useState(false);
 
   // Telefon ve WhatsApp fonksiyonları
@@ -44,27 +47,57 @@ export default function DieticianLoginScreen() {
     }
 
     try {
-      const { data: dieticianData, error: dieticianError } = await supabase
-        .from('diyetisyenler')
-        .select('*')
-        .eq('eposta', email)
-        .eq('sifre', password)
-        .single();
-
-      if (dieticianError || !dieticianData) {
+      const loginResult = await checkDiyetisyenLogin(email, password);
+      
+      if (loginResult === 'no-user') {
         alert('E-posta veya şifre yanlış.');
         return;
       }
-
-      // Diyetisyen onay durumunu kontrol et
-      if (!dieticianData.onay_durumu) {
+      
+      if (loginResult === 'wrong-password') {
+        alert('E-posta veya şifre yanlış.');
+        return;
+      }
+      
+      if (loginResult === 'inactive') {
+        alert('Lisansınız bitmiştir. Lütfen yönetici ile iletişime geçin.');
+        return;
+      }
+      
+      if (loginResult === 'not-approved') {
         alert('Hesabınız henüz onaylanmamış. Lütfen yönetici ile iletişime geçin.');
         return;
       }
+      
+      if (loginResult === 'error') {
+        alert('Giriş yapılırken bir hata oluştu.');
+        return;
+      }
 
-      await AsyncStorage.setItem('currentDiyetisyen', JSON.stringify(dieticianData));
+      // Başarılı giriş - diyetisyen bilgilerini al
+      const { data: diyetisyenData, error: diyetisyenError } = await supabase
+        .from('diyetisyenler')
+        .select('*')
+        .eq('eposta', email)
+        .single();
+
+      if (diyetisyenError || !diyetisyenData) {
+        alert('Kullanıcı bilgileri alınamadı.');
+        return;
+      }
+
+      // Giriş başarılı, rememberMe ise kaydet
+      if (rememberMe) {
+        await AsyncStorage.setItem('rememberedEmail', email);
+        await AsyncStorage.setItem('rememberedPassword', password);
+      } else {
+        await AsyncStorage.removeItem('rememberedEmail');
+        await AsyncStorage.removeItem('rememberedPassword');
+      }
+
+      await AsyncStorage.setItem('currentDiyetisyen', JSON.stringify(diyetisyenData));
       await AsyncStorage.setItem('userType', 'dietician');
-      router.replace('/');
+      router.replace('/(tabs)');
     } catch (error) {
       console.error('Giriş hatası:', error);
       alert('Giriş yapılırken bir hata oluştu.');
@@ -72,15 +105,9 @@ export default function DieticianLoginScreen() {
   };
 
   return (
-    <>
-      <Stack.Screen
-        options={{
-          title: 'Diyetisyen Girişi',
-          headerBackTitle: 'Geri',
-        }}
-      />
+    <SafeAreaView style={{ flex: 1, backgroundColor: '#fff' }}>
       <KeyboardAvoidingView
-        style={{ flex: 1, backgroundColor: '#fff' }}
+        style={{ flex: 1 }}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
         <ScrollView
@@ -117,6 +144,13 @@ export default function DieticianLoginScreen() {
             <TouchableOpacity onPress={() => setPasswordVisible(!isPasswordVisible)}>
               <Ionicons name={isPasswordVisible ? "eye-off-outline" : "eye-outline"} size={22} color="#6C6C6C" />
             </TouchableOpacity>
+          </View>
+          
+          <View style={{ flexDirection: 'row', alignItems: 'center', alignSelf: 'flex-start', marginLeft: 15, marginBottom: 5 }}>
+            <TouchableOpacity onPress={() => setRememberMe(!rememberMe)} style={{ marginRight: 8 }}>
+              <Ionicons name={rememberMe ? 'checkbox' : 'square-outline'} size={22} color="#007AFF" />
+            </TouchableOpacity>
+            <Text style={{ color: '#333', fontSize: 16 }}>Beni Hatırla</Text>
           </View>
           
           <TouchableOpacity style={styles.button} onPress={handleLogin}>
@@ -176,7 +210,7 @@ export default function DieticianLoginScreen() {
           </View>
         </Modal>
       </KeyboardAvoidingView>
-    </>
+    </SafeAreaView>
   );
 }
 
@@ -190,8 +224,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
   },
   logo: {
-    width: 150,
-    height: 150,
+    width: 180,
+    height: 180,
     resizeMode: 'contain',
     marginBottom: 20,
   },

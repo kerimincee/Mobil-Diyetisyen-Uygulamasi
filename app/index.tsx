@@ -1,17 +1,18 @@
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Stack, useRouter } from 'expo-router';
+import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import {
-    Image,
-    KeyboardAvoidingView,
-    Platform,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View
+  Image,
+  KeyboardAvoidingView,
+  Platform,
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View
 } from 'react-native';
 import { supabase } from '../supabaseClient';
 
@@ -52,7 +53,7 @@ export default function UserLoginScreen() {
 
       await AsyncStorage.setItem('currentUser', JSON.stringify(userData));
       await AsyncStorage.setItem('userType', 'user');
-      router.replace('/');
+      router.replace('/(tabs)' as any);
     } catch (error) {
       console.error('Giriş hatası:', error);
       alert('Giriş yapılırken bir hata oluştu.');
@@ -60,15 +61,9 @@ export default function UserLoginScreen() {
   };
 
   return (
-    <>
-      <Stack.Screen
-        options={{
-          title: 'Kullanıcı Girişi',
-          headerBackTitle: 'Geri',
-        }}
-      />
+    <SafeAreaView style={{ flex: 1, backgroundColor: '#fff' }}>
       <KeyboardAvoidingView
-        style={{ flex: 1, backgroundColor: '#fff' }}
+        style={{ flex: 1 }}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
         <ScrollView
@@ -118,7 +113,7 @@ export default function UserLoginScreen() {
             <Text style={styles.buttonText}>Giriş Yap</Text>
           </TouchableOpacity>
           
-          <TouchableOpacity onPress={() => router.push('/Register')}>
+          <TouchableOpacity onPress={() => router.push('/Register' as any)}>
             <Text style={styles.registerText}>
               Hesabın yok mu? <Text style={{fontWeight: 'bold'}}>Kayıt ol</Text>
             </Text>
@@ -126,7 +121,7 @@ export default function UserLoginScreen() {
 
         </ScrollView>
       </KeyboardAvoidingView>
-    </>
+    </SafeAreaView>
   );
 }
 
@@ -140,8 +135,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
   },
   logo: {
-    width: 150,
-    height: 150,
+    width: 180,
+    height: 180,
     resizeMode: 'contain',
     marginBottom: 20,
   },

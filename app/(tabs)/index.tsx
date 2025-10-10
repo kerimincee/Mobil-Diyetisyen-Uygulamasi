@@ -6,7 +6,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Dimensions, Linking, Modal, NativeScrollEvent, NativeSyntheticEvent, Pressable, SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Dimensions, Linking, Modal, NativeScrollEvent, NativeSyntheticEvent, Platform, Pressable, SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useLoading } from '../../contexts/LoadingContext';
 import { supabase } from '../../supabaseClient';
 
@@ -48,7 +48,15 @@ interface Appointment {
   giris_saati: string;
   cikis_saati: string;
   notlar?: string;
-  users: {
+  users?: {
+    id: string;
+    isim: string;
+    soyisim: string;
+    telefon: string;
+    eposta: string;
+    profil_foto?: string;
+  };
+  diyetisyenler?: {
     id: string;
     isim: string;
     soyisim: string;
@@ -68,12 +76,25 @@ export default function HomeScreen() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [user, setUser] = useState<any>(null);
   const [userType, setUserType] = useState<string | null>(null);
-  const [userMenuVisible, setUserMenuVisible] = useState(false);
   const { setShowLoading } = useLoading();
 
   // Randevu state'leri
   const [todayAppointments, setTodayAppointments] = useState<Appointment[]>([]);
   const [appointmentsLoading, setAppointmentsLoading] = useState(false);
+  
+  // Diyetisyen listesi state'leri
+  const [availableDieticians, setAvailableDieticians] = useState<any[]>([]);
+  const [dieticiansLoading, setDieticiansLoading] = useState(false);
+  const [selectedDietician, setSelectedDietician] = useState<any>(null);
+  const [showMapModal, setShowMapModal] = useState(false);
+  
+  // Danışan için randevu state'leri
+  const [userAppointments, setUserAppointments] = useState<Appointment[]>([]);
+  const [userAppointmentsLoading, setUserAppointmentsLoading] = useState(false);
+  
+  // Kullanıcının diyetisyeni
+  const [userDietician, setUserDietician] = useState<any>(null);
+  const [userDieticianLoading,  setUserDieticianLoading] = useState(false);
 
   // Diyetisyen istatistikleri
   const [stats, setStats] = useState({
@@ -90,7 +111,7 @@ export default function HomeScreen() {
       const currentUser = await AsyncStorage.getItem('currentUser');
       const currentDiyetisyen = await AsyncStorage.getItem('currentDiyetisyen');
       if (!currentUser && !currentDiyetisyen) {
-        router.replace('/GirisScreen');
+        router.replace('/');
       }
     })();
   }, []);
@@ -139,7 +160,7 @@ export default function HomeScreen() {
     setStatsLoading(false);
   };
 
-  // Bugünkü randevuları çek
+  // Bugünkü randevuları çek (Diyetisyen için)
   const fetchTodayAppointments = async (diyetisyenId: string) => {
     setAppointmentsLoading(true);
     try {
@@ -151,6 +172,7 @@ export default function HomeScreen() {
           *,
           users(
             id,
+            isim,
             soyisim,
             telefon,
             eposta,
@@ -172,6 +194,90 @@ export default function HomeScreen() {
     setAppointmentsLoading(false);
   };
 
+  // Danışan için randevuları çek (sadece bugün ve gelecekteki randevular)
+  const fetchUserAppointments = async (userId: string) => {
+    setUserAppointmentsLoading(true);
+    try {
+      // Bugünün tarihini al (YYYY-MM-DD formatında)
+      const today = new Date();
+      const todayString = today.toISOString().split('T')[0];
+      
+      const { data: appointmentsData, error } = await supabase
+        .from('appointments')
+        .select(`
+          *,
+          diyetisyenler(
+            id,
+            isim,
+            soyisim,
+            eposta,
+            telefon,
+            profil_foto
+          )
+        `)
+        .eq('user_id', userId)
+        .gte('tarih', todayString) // Sadece bugün ve gelecekteki randevular
+        .order('tarih', { ascending: true })
+        .order('giris_saati', { ascending: true })
+        .limit(5); // Sonraki 5 randevuyu göster
+
+      if (error) {
+        console.error('Danışan randevuları yüklenirken hata:', error);
+      } else {
+        setUserAppointments(appointmentsData || []);
+      }
+    } catch (error) {
+      console.error('Danışan randevuları yüklenirken hata:', error);
+    }
+    setUserAppointmentsLoading(false);
+  };
+
+  // Kullanıcının diyetisyenini getir
+  const fetchUserDietician = async () => {
+    if (!user || userType !== 'user' || !user.diyetisyen_id) return;
+    
+    setUserDieticianLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('diyetisyenler')
+        .select('*')
+        .eq('id', user.diyetisyen_id)
+        .single();
+
+      if (error) {
+        console.error('Diyetisyen getirme hatası:', error);
+      } else {
+        setUserDietician(data);
+      }
+    } catch (error) {
+      console.error('Diyetisyen getirme hatası:', error);
+    }
+    setUserDieticianLoading(false);
+  };
+
+  // Mevcut diyetisyenleri getir (diyetisyeni olmayan kullanıcılar için)
+  const fetchAvailableDieticians = async () => {
+    if (!user || userType !== 'user' || user.diyetisyen_id) return;
+    
+    setDieticiansLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('diyetisyenler')
+        .select('*')
+        .eq('aktif_durum', true)
+        .order('isim', { ascending: true });
+
+      if (error) {
+        console.error('Diyetisyen getirme hatası:', error);
+      } else {
+        setAvailableDieticians(data || []);
+      }
+    } catch (error) {
+      console.error('Diyetisyen getirme hatası:', error);
+    }
+    setDieticiansLoading(false);
+  };
+
   // Telefon ve WhatsApp fonksiyonları
   const phoneNumber = '+905551112233'; // örnek numara
   const whatsappNumber = '905551112233'; // başında ülke kodu olmadan çalışmaz
@@ -181,6 +287,7 @@ export default function HomeScreen() {
   const handleWhatsAppPress = () => {
     Linking.openURL(`https://wa.me/${whatsappNumber}`);
   };
+
 
 
 
@@ -211,6 +318,16 @@ export default function HomeScreen() {
           setUserName(userData.isim);
           setIsLoggedIn(true);
           setUserType(userTypeData);
+          setUser(userData);
+          // Danışan için randevuları çek
+          fetchUserAppointments(userData.id);
+          // Diyetisyeni olan kullanıcılar için diyetisyen bilgisini çek
+          if (userData.diyetisyen_id) {
+            fetchUserDietician();
+          } else {
+            // Diyetisyeni olmayan kullanıcılar için diyetisyenleri çek
+            fetchAvailableDieticians();
+          }
         } else {
           setUserName(null);
           setIsLoggedIn(false);
@@ -247,7 +364,7 @@ export default function HomeScreen() {
     if (user) {
       router.push('/Profile');
     } else {
-      router.push('/GirisScreen');
+      router.push('/');
     }
   };
 
@@ -256,7 +373,7 @@ export default function HomeScreen() {
     if (currentUser) {
       // Giriş yapmışsa profil sayfasına yönlendirme veya başka bir işlem yapılabilir
     } else {
-      router.push('../GirisScreen');
+      router.push('/');
     }
   };
 
@@ -266,8 +383,7 @@ export default function HomeScreen() {
     await AsyncStorage.removeItem('currentUser');
     await AsyncStorage.removeItem('currentDiyetisyen');
     await AsyncStorage.removeItem('userType');
-    setUserMenuVisible(false);
-    router.replace('/GirisScreen');
+    router.replace('/UserLogin');
   };
 
   useEffect(() => {
@@ -298,55 +414,51 @@ export default function HomeScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      {/* Sol üstte bulut ve kullanıcı bilgisi */}
+      {/* Sabit Header */}
       {user && (
-        <>
-          <TouchableOpacity
-            style={{ position: 'absolute', top: 70, left: 18, zIndex: 20, flexDirection: 'row', alignItems: 'center', backgroundColor: '#E6F0E6', borderRadius: 30, paddingVertical: 8, paddingHorizontal: 16, shadowColor: '#4B6C4B', shadowOpacity: 0.10, shadowRadius: 8, shadowOffset: { width: 0, height: 2 }, elevation: 3 }}
-            onPress={() => setUserMenuVisible((v) => !v)}
-            activeOpacity={0.8}
-          >
+        <View style={styles.fixedHeader}>
+          {/* Sol taraf - Kullanıcı bilgisi */}
+          <View style={styles.userInfoContainer}>
             {user.profil_foto ? (
-              <Image source={{ uri: user.profil_foto }} style={{ width: 36, height: 36, borderRadius: 18, marginRight: 8, backgroundColor: '#fff' }} />
+              <Image source={{ uri: user.profil_foto }} style={styles.profileImage} />
             ) : (
-              <Text style={{ fontSize: 28, marginRight: 8 }}>👤</Text>
+              <View style={styles.profileImagePlaceholder}>
+                <Text style={styles.profileIcon}>👤</Text>
+              </View>
             )}
-            <View>
-              <Text style={{ color: '#4B6C4B', fontWeight: 'bold', fontSize: 15 }}>
+            <View style={styles.userTextContainer}>
+              <Text style={styles.welcomeText}>
                 Merhaba! {user.isim}
               </Text>
-              <Text style={{ color: '#4B6C4B', fontSize: 12 }}>
-                {userType === 'dietician' ? 'Diyetisyen' : 'Kullanıcı'}
+              <Text style={styles.userTypeText}>
+                {userType === 'dietician' ? 'Diyetisyen' : 'Danışman'}
               </Text>
             </View>
-          </TouchableOpacity>
-          {userMenuVisible && (
-            <View style={{ position: 'absolute', top: 90, left: 18, zIndex: 30, backgroundColor: '#fff', borderRadius: 18, paddingVertical: 12, paddingHorizontal: 24, shadowColor: '#4B6C4B', shadowOpacity: 0.13, shadowRadius: 8, shadowOffset: { width: 0, height: 2 }, elevation: 6, minWidth: 180 }}>
-              {/* Kullanıcı bilgi alanı */}
-              <TouchableOpacity onPress={() => { 
-                setUserMenuVisible(false); 
+          </View>
+
+          {/* Sağ taraf - İkonlar */}
+          <View style={styles.headerActions}>
+            <TouchableOpacity 
+              style={styles.headerIconButton}
+              onPress={() => {
                 if (userType === 'dietician') {
                   router.push('/DieticianProfile');
                 } else {
                   router.push('/Profile');
                 }
-              }} style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 6, marginBottom: 10 }}>
-                <Text style={{ fontSize: 24, marginRight: 8 }}>{userType === 'dietician' ? '👩‍⚕️' : '👤'}</Text>
-                <View>
-                  <Text style={{ color: '#4B6C4B', fontWeight: 'bold', fontSize: 15 }}>{user.isim}</Text>
-                  <Text style={{ color: '#4B6C4B', fontSize: 13 }}>
-                    {userType === 'dietician' ? 'Diyetisyen Profili' : 'Profili Gör'}
-                  </Text>
-                </View>
-              </TouchableOpacity>
-              <View style={{ height: 1, backgroundColor: '#E6F0E6', marginVertical: 6 }} />
-              <TouchableOpacity onPress={handleLogout} style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 6 }}>
-                <Ionicons name="log-out-outline" size={20} color="#4B6C4B" style={{ marginRight: 8 }} />
-                <Text style={{ color: '#4B6C4B', fontWeight: 'bold', fontSize: 16 }}>Çıkış Yap</Text>
-              </TouchableOpacity>
-            </View>
-          )}
-        </>
+              }}
+            >
+              <Ionicons name="person-outline" size={24} color="#4B6C4B" />
+            </TouchableOpacity>
+            
+            <TouchableOpacity 
+              style={styles.headerIconButton}
+              onPress={handleLogout}
+            >
+              <Ionicons name="log-out-outline" size={24} color="#4B6C4B" />
+            </TouchableOpacity>
+          </View>
+        </View>
       )}
 
       <ScrollView 
@@ -361,7 +473,7 @@ export default function HomeScreen() {
             <View style={styles.statsGrid}>
               <View style={styles.statCard}>
                 <View style={styles.statIconContainer}>
-                  <Ionicons name="people" size={24} color="#4B6C4B" />
+                  <Ionicons name="people" size={28} color="#4B6C4B" />
                 </View>
                 <Text style={styles.statNumber}>{stats.totalClients}</Text>
                 <Text style={styles.statLabel}>Toplam Danışan</Text>
@@ -369,7 +481,7 @@ export default function HomeScreen() {
               
               <View style={styles.statCard}>
                 <View style={styles.statIconContainer}>
-                  <Ionicons name="calendar" size={24} color="#4B6C4B" />
+                  <Ionicons name="calendar" size={28} color="#4B6C4B" />
                 </View>
                 <Text style={styles.statNumber}>{stats.totalAppointments}</Text>
                 <Text style={styles.statLabel}>Toplam Randevu</Text>
@@ -377,7 +489,7 @@ export default function HomeScreen() {
               
               <View style={styles.statCard}>
                 <View style={styles.statIconContainer}>
-                  <Ionicons name="today" size={24} color="#4B6C4B" />
+                  <Ionicons name="today" size={28} color="#4B6C4B" />
                 </View>
                 <Text style={styles.statNumber}>{stats.todayAppointments}</Text>
                 <Text style={styles.statLabel}>Bugünkü Randevu</Text>
@@ -385,7 +497,7 @@ export default function HomeScreen() {
               
               <View style={styles.statCard}>
                 <View style={styles.statIconContainer}>
-                  <Ionicons name="time" size={24} color="#4B6C4B" />
+                  <Ionicons name="time" size={28} color="#4B6C4B" />
                 </View>
                 <Text style={styles.statNumber}>{stats.pendingAppointments}</Text>
                 <Text style={styles.statLabel}>Gelecek Randevu</Text>
@@ -423,7 +535,7 @@ export default function HomeScreen() {
                   <View key={appointment.id} style={styles.appointmentItem}>
                     <View style={styles.appointmentHeader}>
                       <View style={styles.clientInfo}>
-                        {appointment.users.profil_foto ? (
+                        {appointment.users?.profil_foto ? (
                           <Image 
                             source={{ uri: appointment.users.profil_foto }} 
                             style={styles.clientAvatar} 
@@ -431,13 +543,13 @@ export default function HomeScreen() {
                         ) : (
                           <View style={styles.clientAvatarPlaceholder}>
                             <Text style={styles.clientAvatarText}>
-                              {appointment.users.isim.charAt(0)}{appointment.users.soyisim.charAt(0)}
+                              {appointment.users?.isim?.charAt(0)}{appointment.users?.soyisim?.charAt(0)}
                             </Text>
                           </View>
                         )}
                         <View style={styles.clientDetails}>
                           <Text style={styles.clientName}>
-                            {appointment.users.isim} {appointment.users.soyisim}
+                            {appointment.users?.isim} {appointment.users?.soyisim}
                           </Text>
                           <Text style={styles.appointmentTime}>
                             {appointment.giris_saati} - {appointment.cikis_saati}
@@ -463,53 +575,273 @@ export default function HomeScreen() {
           </View>
         )}
 
-        {/* Diyetisyen için hızlı erişim kartları */}
-        {userType === 'dietician' && (
-          <View style={styles.quickAccessContainer}>
-            <Text style={styles.quickAccessTitle}>Hızlı Erişim</Text>
-            <View style={styles.quickAccessGrid}>
+        {/* Danışan için randevular */}
+        {userType === 'user' && (
+          <View style={styles.appointmentsBox}>
+            <View style={styles.appointmentsHeader}>
+              <Text style={styles.appointmentsTitle}>Randevularım</Text>
               <TouchableOpacity 
-                style={styles.quickAccessCard}
-                onPress={() => router.push('/(tabs)/BMI')}
+                style={styles.refreshButton}
+                onPress={() => user && fetchUserAppointments(user.id)}
+                disabled={userAppointmentsLoading}
               >
-                <View style={styles.quickAccessIconContainer}>
-                  <Ionicons name="calendar-outline" size={28} color="#4B6C4B" />
-                </View>
-                <Text style={styles.quickAccessLabel}>Randevular</Text>
-              </TouchableOpacity>
-              
-              <TouchableOpacity 
-                style={styles.quickAccessCard}
-                onPress={() => router.push('/(tabs)/Kalori')}
-              >
-                <View style={styles.quickAccessIconContainer}>
-                  <Ionicons name="restaurant-outline" size={28} color="#4B6C4B" />
-                </View>
-                <Text style={styles.quickAccessLabel}>Danışan Yemekleri</Text>
-              </TouchableOpacity>
-              
-              <TouchableOpacity 
-                style={styles.quickAccessCard}
-                onPress={() => router.push('/(tabs)/Takvim')}
-              >
-                <View style={styles.quickAccessIconContainer}>
-                  <Ionicons name="nutrition-outline" size={28} color="#4B6C4B" />
-                </View>
-                <Text style={styles.quickAccessLabel}>Diyet Planları</Text>
-              </TouchableOpacity>
-              
-              <TouchableOpacity 
-                style={styles.quickAccessCard}
-                onPress={() => router.push('/DieticianProfile')}
-              >
-                <View style={styles.quickAccessIconContainer}>
-                  <Ionicons name="person-outline" size={28} color="#4B6C4B" />
-                </View>
-                <Text style={styles.quickAccessLabel}>Profil</Text>
+                <Ionicons 
+                  name="refresh" 
+                  size={20} 
+                  color="#4B6C4B" 
+                  style={userAppointmentsLoading ? { opacity: 0.5 } : {}} 
+                />
               </TouchableOpacity>
             </View>
+            
+            {userAppointmentsLoading ? (
+              <View style={styles.loadingContainer}>
+                <Text style={styles.loadingText}>Randevular yükleniyor...</Text>
+              </View>
+            ) : userAppointments.length > 0 ? (
+              <View style={styles.appointmentsList}>
+                {userAppointments.map((appointment) => (
+                  <View key={appointment.id} style={styles.appointmentItem}>
+                    <View style={styles.appointmentHeader}>
+                      <View style={styles.clientInfo}>
+                        {appointment.diyetisyenler?.profil_foto ? (
+                          <Image 
+                            source={{ uri: appointment.diyetisyenler.profil_foto }} 
+                            style={styles.clientAvatar} 
+                          />
+                        ) : (
+                          <View style={styles.clientAvatarPlaceholder}>
+                            <Text style={styles.clientAvatarText}>
+                              {appointment.diyetisyenler?.isim?.charAt(0)}{appointment.diyetisyenler?.soyisim?.charAt(0)}
+                            </Text>
+                          </View>
+                        )}
+                        <View style={styles.clientDetails}>
+                          <Text style={styles.clientName}>
+                            Dr. {appointment.diyetisyenler?.isim} {appointment.diyetisyenler?.soyisim}
+                          </Text>
+                          <Text style={styles.appointmentTime}>
+                            {new Date(appointment.tarih).toLocaleDateString('tr-TR')} - {appointment.giris_saati} - {appointment.cikis_saati}
+                          </Text>
+                        </View>
+                      </View>
+                    </View>
+                    {appointment.notlar && (
+                      <Text style={styles.appointmentNotes} numberOfLines={2}>
+                        {appointment.notlar}
+                      </Text>
+                    )}
+                  </View>
+                ))}
+              </View>
+            ) : user?.diyetisyen_id ? (
+              <View style={styles.noAppointmentsContainer}>
+                <Ionicons name="calendar-outline" size={48} color="#B0B0B0" />
+                <Text style={styles.noAppointmentsText}>Randevunuz bulunmuyor</Text>
+                <Text style={styles.noAppointmentsSubtext}>Diyetisyeninizden randevu alın</Text>
+              </View>
+            ) : (
+              <View style={styles.noAppointmentsContainer}>
+                <Ionicons name="person-add-outline" size={48} color="#B0B0B0" />
+                <Text style={styles.noAppointmentsText}>Henüz diyetisyeniniz yok</Text>
+                <Text style={styles.noAppointmentsSubtext}>Diyetisyenlerimizle İletişime Geçin</Text>
+              </View>
+            )}
           </View>
         )}
+
+        {/* Diyetisyeni olan kullanıcılar için diyetisyen bilgisi */}
+        {userType === 'user' && user?.diyetisyen_id && (
+          <View style={styles.myDieticianBox}>
+            <View style={styles.myDieticianHeader}>
+              <Text style={styles.myDieticianTitle}>Diyetisyenim</Text>
+            </View>
+            
+            {userDieticianLoading ? (
+              <View style={styles.loadingContainer}>
+                <Text style={styles.loadingText}>Diyetisyen bilgileri yükleniyor...</Text>
+              </View>
+            ) : userDietician ? (
+              <View style={styles.myDieticianContent}>
+                <View style={styles.myDieticianInfo}>
+                  {userDietician.profil_foto ? (
+                    <Image 
+                      source={{ uri: userDietician.profil_foto }} 
+                      style={styles.myDieticianAvatar} 
+                    />
+                  ) : (
+                    <View style={styles.myDieticianAvatarPlaceholder}>
+                      <Text style={styles.myDieticianAvatarText}>
+                        {userDietician.isim?.charAt(0)}{userDietician.soyisim?.charAt(0)}
+                      </Text>
+                    </View>
+                  )}
+                  <View style={styles.myDieticianDetails}>
+                    <Text style={styles.myDieticianName}>
+                      Dr. {userDietician.isim} {userDietician.soyisim}
+                    </Text>
+                    <Text style={styles.myDieticianSpecialty}>
+                      {userDietician.uzmanlik_alani || 'Genel Beslenme'}
+                    </Text>
+                    <Text style={styles.myDieticianExperience}>
+                      {userDietician.deneyim_yili} yıl deneyim
+                    </Text>
+                  </View>
+                </View>
+                
+                {(userDietician.adres || userDietician.telefon) && (
+                  <View style={styles.myDieticianContactSection}>
+                    {userDietician.adres && (
+                      <View style={styles.myDieticianContactItem}>
+                        <Ionicons name="location-outline" size={18} color="#4B6C4B" />
+                        <Text style={styles.myDieticianContactText}>
+                          {userDietician.adres}
+                        </Text>
+                      </View>
+                    )}
+                    {userDietician.ilce && userDietician.sehir && (
+                      <View style={styles.myDieticianContactItem}>
+                        <Ionicons name="location" size={18} color="#4B6C4B" />
+                        <Text style={styles.myDieticianContactText}>
+                          {userDietician.ilce}, {userDietician.sehir}
+                        </Text>
+                      </View>
+                    )}
+                    {userDietician.telefon && (
+                      <TouchableOpacity 
+                        style={styles.myDieticianContactItem}
+                        onPress={() => Linking.openURL(`tel:${userDietician.telefon}`)}
+                      >
+                        <Ionicons name="call-outline" size={18} color="#4B6C4B" />
+                        <Text style={[styles.myDieticianContactText, { color: '#4B6C4B', fontWeight: '600' }]}>
+                          {userDietician.telefon}
+                        </Text>
+                      </TouchableOpacity>
+                    )}
+                    {userDietician.enlem && userDietician.boylam && (
+                      <TouchableOpacity
+                        style={styles.myDieticianMapButton}
+                        onPress={() => {
+                          const url = `https://maps.google.com/?q=${userDietician.enlem},${userDietician.boylam}`;
+                          Linking.openURL(url);
+                        }}
+                      >
+                        <Ionicons name="map" size={18} color="#fff" />
+                        <Text style={styles.myDieticianMapButtonText}>Haritada Göster</Text>
+                      </TouchableOpacity>
+                    )}
+                  </View>
+                )}
+              </View>
+            ) : (
+              <View style={styles.noAppointmentsContainer}>
+                <Ionicons name="person-outline" size={48} color="#B0B0B0" />
+                <Text style={styles.noAppointmentsText}>Diyetisyen bilgisi bulunamadı</Text>
+              </View>
+            )}
+          </View>
+        )}
+
+        {/* Diyetisyeni olmayan kullanıcılar için diyetisyen listesi */}
+        {userType === 'user' && !user?.diyetisyen_id && (
+          <View style={styles.dieticiansBox}>
+            <View style={styles.dieticiansHeader}>
+              <Text style={styles.dieticiansTitle}>Diyetisyenlerimiz</Text>
+              <TouchableOpacity 
+                style={styles.refreshButton}
+                onPress={fetchAvailableDieticians}
+                disabled={dieticiansLoading}
+              >
+                <Ionicons 
+                  name="refresh" 
+                  size={20} 
+                  color="#4B6C4B" 
+                  style={dieticiansLoading ? { opacity: 0.5 } : {}} 
+                />
+              </TouchableOpacity>
+            </View>
+            
+            {dieticiansLoading ? (
+              <View style={styles.loadingContainer}>
+                <Text style={styles.loadingText}>Diyetisyenler yükleniyor...</Text>
+              </View>
+            ) : availableDieticians.length > 0 ? (
+              <View style={styles.dieticiansList}>
+                {availableDieticians.map((dietician) => (
+                  <View 
+                    key={dietician.id} 
+                    style={styles.dieticianItem}
+                  >
+                    <View style={styles.dieticianInfo}>
+                      {dietician.profil_foto ? (
+                        <Image 
+                          source={{ uri: dietician.profil_foto }} 
+                          style={styles.dieticianAvatar} 
+                        />
+                      ) : (
+                        <View style={styles.dieticianAvatarPlaceholder}>
+                          <Text style={styles.dieticianAvatarText}>
+                            {dietician.isim?.charAt(0)}{dietician.soyisim?.charAt(0)}
+                          </Text>
+                        </View>
+                      )}
+                      <View style={styles.dieticianDetails}>
+                        <Text style={styles.dieticianName}>
+                          Dr. {dietician.isim} {dietician.soyisim}
+                        </Text>
+                        <Text style={styles.dieticianSpecialty}>
+                          {dietician.uzmanlik_alani || 'Genel Beslenme'}
+                        </Text>
+                        <Text style={styles.dieticianExperience}>
+                          {dietician.deneyim_yili} yıl deneyim
+                        </Text>
+                        {dietician.telefon && (
+                          <TouchableOpacity 
+                            style={styles.locationContainer}
+                            onPress={() => Linking.openURL(`tel:${dietician.telefon}`)}
+                          >
+                            <Ionicons name="call-outline" size={14} color="#4B6C4B" />
+                            <Text style={[styles.dieticianLocation, { color: '#4B6C4B', fontWeight: '600' }]}>
+                              {dietician.telefon}
+                            </Text>
+                          </TouchableOpacity>
+                        )}
+                        {dietician.adres && (
+                          <View style={styles.locationContainer}>
+                            <Ionicons name="location-outline" size={14} color="#666" />
+                            <Text style={styles.dieticianLocation}>
+                              {dietician.ilce}, {dietician.sehir}
+                            </Text>
+                          </View>
+                        )}
+                      </View>
+                    </View>
+                    <View style={styles.dieticianActions}>
+                      {dietician.enlem && dietician.boylam && (
+                        <TouchableOpacity 
+                          style={styles.mapButton}
+                          onPress={() => {
+                            setSelectedDietician(dietician);
+                            setShowMapModal(true);
+                          }}
+                        >
+                          <Ionicons name="map-outline" size={20} color="#4B6C4B" />
+                        </TouchableOpacity>
+                      )}
+                    </View>
+                  </View>
+                ))}
+              </View>
+            ) : (
+              <View style={styles.noAppointmentsContainer}>
+                <Ionicons name="person-outline" size={48} color="#B0B0B0" />
+                <Text style={styles.noAppointmentsText}>Diyetisyen bulunamadı</Text>
+                <Text style={styles.noAppointmentsSubtext}>Lütfen daha sonra tekrar deneyin</Text>
+              </View>
+            )}
+          </View>
+        )}
+
       </ScrollView>
 
       {/* HAKKIMIZDA MODAL */}
@@ -577,20 +909,158 @@ export default function HomeScreen() {
           </View>
         </View>
       </Modal>
+
+
+      {/* Harita Modal */}
+      <Modal
+        visible={showMapModal}
+        animationType="slide"
+        transparent
+        onRequestClose={() => setShowMapModal(false)}
+      >
+        <View style={styles.dieticianModalOverlay}>
+          <View style={styles.mapModalContent}>
+            <View style={styles.dieticianModalHeader}>
+              <Text style={styles.dieticianModalTitle}>Konum</Text>
+              <TouchableOpacity onPress={() => setShowMapModal(false)}>
+                <Ionicons name="close" size={24} color="#666" />
+              </TouchableOpacity>
+            </View>
+            
+            {selectedDietician && selectedDietician.enlem && selectedDietician.boylam && (
+              <View style={styles.mapContainer}>
+                <Text style={styles.mapText}>
+                  {selectedDietician.isim} {selectedDietician.soyisim} diyetisyeninin konumu:
+                </Text>
+                <Text style={styles.coordinatesText}>
+                  Enlem: {selectedDietician.enlem.toFixed(6)}
+                </Text>
+                <Text style={styles.coordinatesText}>
+                  Boylam: {selectedDietician.boylam.toFixed(6)}
+                </Text>
+                <TouchableOpacity
+                  style={[styles.dieticianModalButton, styles.mapButton]}
+                  onPress={() => {
+                    const url = `https://maps.google.com/?q=${selectedDietician.enlem},${selectedDietician.boylam}`;
+                    Linking.openURL(url);
+                  }}
+                >
+                  <Ionicons name="map" size={20} color="#fff" style={{ marginRight: 8 }} />
+                  <Text style={styles.modalButtonText}>Haritada Aç</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
 
+// Font ailesi ayarları
+const getFontFamily = () => {
+  return Platform.OS === 'ios' ? 'System' : 'Roboto';
+};
+
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#F8FAF7',
+    backgroundColor: '#F0F8FF',
   },
   container: {
     flex: 1,
-    backgroundColor: '#F8FAF7',
-    padding: 16,
-    paddingTop: 100, // üstte daha fazla boşluk
+    backgroundColor: '#F0F8FF',
+    padding: 20,
+    paddingTop: 140,
+  },
+  // Sabit Header Stilleri
+  fixedHeader: {
+    position: 'absolute',
+    top: 60,
+    left: 20,
+    right: 20,
+    zIndex: 100,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.98)',
+    borderRadius: 28,
+    paddingVertical: 16,
+    paddingHorizontal: 20,
+    shadowColor: '#4B6C4B',
+    shadowOpacity: 0.25,
+    shadowRadius: 16,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 12,
+    borderWidth: 2,
+    borderColor: 'rgba(75, 108, 75, 0.1)',
+    backdropFilter: 'blur(20px)',
+  },
+  userInfoContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  profileImage: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    marginRight: 16,
+    borderWidth: 3,
+    borderColor: 'rgba(75, 108, 75, 0.2)',
+  },
+  profileImagePlaceholder: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: 'rgba(75, 108, 75, 0.1)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 16,
+    borderWidth: 3,
+    borderColor: 'rgba(75, 108, 75, 0.2)',
+  },
+  profileIcon: {
+    fontSize: 24,
+    color: '#4B6C4B',
+  },
+  userTextContainer: {
+    flex: 1,
+  },
+  welcomeText: {
+    color: '#2C5530',
+    fontFamily: getFontFamily(),
+    fontWeight: '700',
+    fontSize: 18,
+    letterSpacing: 0.3,
+    marginBottom: 2,
+  },
+  userTypeText: {
+    color: '#5A6B5A',
+    fontFamily: getFontFamily(),
+    fontSize: 14,
+    fontWeight: '600',
+    letterSpacing: 0.2,
+  },
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  headerIconButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: 'rgba(75, 108, 75, 0.1)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginLeft: 12,
+    borderWidth: 2,
+    borderColor: 'rgba(75, 108, 75, 0.15)',
+    shadowColor: '#4B6C4B',
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 2,
   },
   motivationBox: {
     backgroundColor: '#E6EFE2',
@@ -833,30 +1303,44 @@ const styles = StyleSheet.create({
   // Randevular alanı stilleri
   appointmentsBox: {
     backgroundColor: '#fff',
-    borderRadius: 18,
-    padding: 18,
-    marginBottom: 18,
-    shadowColor: '#5A7742',
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 3,
+    borderRadius: 24,
+    padding: 24,
+    marginBottom: 20,
+    shadowColor: '#4B6C4B',
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(75, 108, 75, 0.1)',
   },
   appointmentsHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 16,
+    marginBottom: 20,
+    paddingBottom: 12,
+    borderBottomWidth: 2,
+    borderBottomColor: 'rgba(75, 108, 75, 0.1)',
   },
   appointmentsTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#4B6C4B',
+    fontSize: 22,
+    fontFamily: getFontFamily(),
+    fontWeight: '700',
+    color: '#2C5530',
+    letterSpacing: 0.5,
   },
   refreshButton: {
-    padding: 8,
-    borderRadius: 20,
-    backgroundColor: '#E6F0E6',
+    padding: 12,
+    borderRadius: 24,
+    backgroundColor: 'rgba(75, 108, 75, 0.1)',
+    borderWidth: 1,
+    borderColor: 'rgba(75, 108, 75, 0.2)',
+    shadowColor: '#4B6C4B',
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 2,
   },
   loadingContainer: {
     alignItems: 'center',
@@ -870,12 +1354,19 @@ const styles = StyleSheet.create({
     maxHeight: 300,
   },
   appointmentItem: {
-    backgroundColor: '#F8FAF7',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
-    borderLeftWidth: 4,
+    backgroundColor: 'rgba(248, 255, 254, 0.8)',
+    borderRadius: 16,
+    padding: 20,
+    marginBottom: 16,
+    borderLeftWidth: 5,
     borderLeftColor: '#4B6C4B',
+    borderWidth: 1,
+    borderColor: 'rgba(75, 108, 75, 0.1)',
+    shadowColor: '#4B6C4B',
+    shadowOpacity: 0.08,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 3,
   },
   appointmentHeader: {
     flexDirection: 'row',
@@ -930,36 +1421,52 @@ const styles = StyleSheet.create({
   },
   noAppointmentsContainer: {
     alignItems: 'center',
-    paddingVertical: 30,
+    paddingVertical: 40,
+    backgroundColor: 'rgba(248, 255, 254, 0.5)',
+    borderRadius: 16,
+    borderWidth: 2,
+    borderColor: 'rgba(75, 108, 75, 0.1)',
+    borderStyle: 'dashed',
   },
   noAppointmentsText: {
-    fontSize: 16,
-    color: '#666',
-    marginTop: 12,
-    marginBottom: 4,
+    fontSize: 18,
+    fontFamily: getFontFamily(),
+    color: '#5A6B5A',
+    marginTop: 16,
+    marginBottom: 8,
+    fontWeight: '600',
+    letterSpacing: 0.3,
   },
   noAppointmentsSubtext: {
     fontSize: 14,
-    color: '#999',
+    fontFamily: getFontFamily(),
+    color: '#8A9B8A',
     textAlign: 'center',
+    fontWeight: '500',
+    letterSpacing: 0.2,
   },
   // İstatistik kartları stilleri
   statsContainer: {
     backgroundColor: '#fff',
-    borderRadius: 18,
-    padding: 18,
-    marginBottom: 18,
-    shadowColor: '#5A7742',
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 3,
+    borderRadius: 24,
+    padding: 24,
+    marginBottom: 20,
+    shadowColor: '#4B6C4B',
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(75, 108, 75, 0.1)',
   },
   statsTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#4B6C4B',
-    marginBottom: 16,
+    fontSize: 22,
+    fontFamily: getFontFamily(),
+    fontWeight: '700',
+    color: '#2C5530',
+    marginBottom: 20,
+    textAlign: 'center',
+    letterSpacing: 0.5,
   },
   statsGrid: {
     flexDirection: 'row',
@@ -968,80 +1475,344 @@ const styles = StyleSheet.create({
   },
   statCard: {
     width: '48%',
-    backgroundColor: '#F8FAF7',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
+    backgroundColor: 'linear-gradient(135deg, #F8FFFE 0%, #E8F5E8 100%)',
+    borderRadius: 20,
+    padding: 20,
+    marginBottom: 16,
     alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#E6F0E6',
-  },
-  statIconContainer: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: '#E6F0E6',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  statNumber: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#4B6C4B',
-    marginBottom: 4,
-  },
-  statLabel: {
-    fontSize: 12,
-    color: '#666',
-    textAlign: 'center',
-  },
-  // Hızlı erişim kartları stilleri
-  quickAccessContainer: {
-    backgroundColor: '#fff',
-    borderRadius: 18,
-    padding: 18,
-    marginBottom: 18,
-    shadowColor: '#5A7742',
-    shadowOpacity: 0.08,
+    borderWidth: 2,
+    borderColor: 'rgba(75, 108, 75, 0.1)',
+    shadowColor: '#4B6C4B',
+    shadowOpacity: 0.1,
     shadowRadius: 8,
     shadowOffset: { width: 0, height: 2 },
-    elevation: 3,
+    elevation: 4,
   },
-  quickAccessTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#4B6C4B',
-    marginBottom: 16,
-  },
-  quickAccessGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
-  },
-  quickAccessCard: {
-    width: '48%',
-    backgroundColor: '#F8FAF7',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#E6F0E6',
-  },
-  quickAccessIconContainer: {
+  statIconContainer: {
     width: 56,
     height: 56,
     borderRadius: 28,
-    backgroundColor: '#E6F0E6',
+    backgroundColor: 'rgba(75, 108, 75, 0.1)',
     justifyContent: 'center',
     alignItems: 'center',
+    marginBottom: 12,
+    borderWidth: 2,
+    borderColor: 'rgba(75, 108, 75, 0.2)',
+  },
+  statNumber: {
+    fontSize: 28,
+    fontFamily: getFontFamily(),
+    fontWeight: '800',
+    color: '#2C5530',
+    marginBottom: 6,
+    textShadowColor: 'rgba(75, 108, 75, 0.3)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 2,
+  },
+  statLabel: {
+    fontSize: 13,
+    fontFamily: getFontFamily(),
+    color: '#5A6B5A',
+    textAlign: 'center',
+    fontWeight: '600',
+    letterSpacing: 0.3,
+  },
+  // Diyetisyenim (kullanıcının diyetisyeni) stilleri
+  myDieticianBox: {
+    backgroundColor: '#fff',
+    borderRadius: 24,
+    padding: 25,
+    marginBottom: 25,
+    shadowColor: '#4B6C4B',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    elevation: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(75, 108, 75, 0.1)',
+  },
+  myDieticianHeader: {
+    marginBottom: 20,
+    paddingBottom: 12,
+    borderBottomWidth: 2,
+    borderBottomColor: 'rgba(75, 108, 75, 0.1)',
+  },
+  myDieticianTitle: {
+    fontSize: 22,
+    fontFamily: getFontFamily(),
+    fontWeight: '700',
+    color: '#2C5530',
+    letterSpacing: 0.5,
+  },
+  myDieticianContent: {
+    gap: 20,
+  },
+  myDieticianInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  myDieticianAvatar: {
+    width: 70,
+    height: 70,
+    borderRadius: 35,
+    marginRight: 20,
+    borderWidth: 3,
+    borderColor: 'rgba(75, 108, 75, 0.2)',
+  },
+  myDieticianAvatarPlaceholder: {
+    width: 70,
+    height: 70,
+    borderRadius: 35,
+    backgroundColor: 'rgba(75, 108, 75, 0.1)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 20,
+    borderWidth: 3,
+    borderColor: 'rgba(75, 108, 75, 0.2)',
+  },
+  myDieticianAvatarText: {
+    color: '#4B6C4B',
+    fontSize: 24,
+    fontWeight: 'bold',
+  },
+  myDieticianDetails: {
+    flex: 1,
+  },
+  myDieticianName: {
+    fontSize: 20,
+    fontFamily: getFontFamily(),
+    fontWeight: '700',
+    color: '#2C5530',
+    marginBottom: 6,
+  },
+  myDieticianSpecialty: {
+    fontSize: 15,
+    fontFamily: getFontFamily(),
+    color: '#4B6C4B',
+    fontWeight: '600',
+    marginBottom: 4,
+  },
+  myDieticianExperience: {
+    fontSize: 14,
+    fontFamily: getFontFamily(),
+    color: '#666',
+  },
+  myDieticianContactSection: {
+    backgroundColor: 'rgba(248, 255, 254, 0.8)',
+    borderRadius: 16,
+    padding: 16,
+    gap: 12,
+  },
+  myDieticianContactItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  myDieticianContactText: {
+    fontSize: 14,
+    fontFamily: getFontFamily(),
+    color: '#666',
+    flex: 1,
+  },
+  myDieticianMapButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#4B6C4B',
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 12,
+    gap: 8,
+    marginTop: 8,
+  },
+  myDieticianMapButtonText: {
+    color: '#fff',
+    fontSize: 15,
+    fontFamily: getFontFamily(),
+    fontWeight: '600',
+  },
+  // Diyetisyen listesi stilleri
+  dieticiansBox: {
+    backgroundColor: '#fff',
+    borderRadius: 24,
+    padding: 25,
+    marginBottom: 25,
+    shadowColor: '#4B6C4B',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    elevation: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(75, 108, 75, 0.1)',
+  },
+  dieticiansHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 20,
+    paddingBottom: 12,
+    borderBottomWidth: 2,
+    borderBottomColor: 'rgba(75, 108, 75, 0.1)',
+  },
+  dieticiansTitle: {
+    fontSize: 22,
+    fontFamily: getFontFamily(),
+    fontWeight: '700',
+    color: '#2C5530',
+    letterSpacing: 0.5,
+  },
+  dieticiansList: {
+    maxHeight: 400,
+  },
+  dieticianItem: {
+    backgroundColor: 'rgba(248, 255, 254, 0.8)',
+    borderRadius: 16,
+    padding: 20,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(75, 108, 75, 0.1)',
+    shadowColor: '#4B6C4B',
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 2,
+  },
+  dieticianInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  dieticianAvatar: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    marginRight: 16,
+    borderWidth: 2,
+    borderColor: 'rgba(75, 108, 75, 0.2)',
+  },
+  dieticianAvatarPlaceholder: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: 'rgba(75, 108, 75, 0.1)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 16,
+    borderWidth: 2,
+    borderColor: 'rgba(75, 108, 75, 0.2)',
+  },
+  dieticianAvatarText: {
+    color: '#4B6C4B',
+    fontSize: 20,
+    fontWeight: 'bold',
+  },
+  dieticianDetails: {
+    flex: 1,
+  },
+  dieticianName: {
+    fontSize: 18,
+    fontFamily: getFontFamily(),
+    fontWeight: '700',
+    color: '#2C5530',
+    marginBottom: 4,
+  },
+  dieticianSpecialty: {
+    fontSize: 14,
+    fontFamily: getFontFamily(),
+    color: '#4B6C4B',
+    fontWeight: '600',
+    marginBottom: 4,
+  },
+  dieticianExperience: {
+    fontSize: 13,
+    fontFamily: getFontFamily(),
+    color: '#666',
     marginBottom: 8,
   },
-  quickAccessLabel: {
+  locationContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  dieticianLocation: {
     fontSize: 12,
-    color: '#4B6C4B',
+    fontFamily: getFontFamily(),
+    color: '#666',
+    marginLeft: 4,
+  },
+  dieticianActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  mapButton: {
+    padding: 8,
+    borderRadius: 20,
+    backgroundColor: 'rgba(75, 108, 75, 0.1)',
+    borderWidth: 1,
+    borderColor: 'rgba(75, 108, 75, 0.2)',
+  },
+  // Diyetisyen Modal stilleri
+  dieticianModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  dieticianModalContent: {
+    backgroundColor: '#fff',
+    borderRadius: 20,
+    padding: 24,
+    width: '100%',
+    maxHeight: '80%',
+  },
+  mapModalContent: {
+    backgroundColor: '#fff',
+    borderRadius: 20,
+    padding: 24,
+    width: '100%',
+    maxHeight: '70%',
+  },
+  dieticianModalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 20,
+    paddingBottom: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e0e0e0',
+  },
+  dieticianModalTitle: {
+    fontSize: 20,
+    fontFamily: getFontFamily(),
+    fontWeight: '700',
+    color: '#2C5530',
+  },
+  dieticianModalButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 16,
+    paddingHorizontal: 24,
+    borderRadius: 16,
+    marginBottom: 12,
+  },
+  mapContainer: {
+    alignItems: 'center',
+    paddingVertical: 20,
+  },
+  mapText: {
+    fontSize: 16,
+    fontFamily: getFontFamily(),
+    color: '#2C5530',
     textAlign: 'center',
-    fontWeight: '500',
+    marginBottom: 16,
+    fontWeight: '600',
+  },
+  coordinatesText: {
+    fontSize: 14,
+    fontFamily: getFontFamily(),
+    color: '#666',
+    marginBottom: 8,
   },
 });

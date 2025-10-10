@@ -2,7 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { Alert, Image, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, Image, SafeAreaView, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useLoading } from '../contexts/LoadingContext';
 import { supabase } from '../supabaseClient';
 
@@ -42,7 +42,7 @@ export default function ClientDetailScreen() {
         // Diyetisyen kontrolü
         const currentDiyetisyen = await AsyncStorage.getItem('currentDiyetisyen');
         if (!currentDiyetisyen) {
-          router.replace('/GirisScreen');
+          router.replace('/' as any);
           return;
         }
 
@@ -135,7 +135,8 @@ export default function ClientDetailScreen() {
   }
 
   return (
-    <ScrollView style={styles.container}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: '#f0f2f5' }}>
+      <ScrollView style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
         <View style={styles.clientInfo}>
@@ -236,7 +237,8 @@ export default function ClientDetailScreen() {
           ))
         )}
       </View>
-    </ScrollView>
+      </ScrollView>
+    </SafeAreaView>
   );
 }
 

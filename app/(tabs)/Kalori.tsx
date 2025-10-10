@@ -315,7 +315,7 @@ export default function Kalori() {
       <LinearGradient colors={["#F8FAF7", "#E6F0E6"]} style={{ flex: 1 }}>
         {/* Sağ üstte yenileme butonu */}
         <TouchableOpacity
-          style={{ position: 'absolute', top: 44, right: 24, zIndex: 10, backgroundColor: '#fff', borderRadius: 22, padding: 8, shadowColor: '#4B6C4B', shadowOpacity: 0.13, shadowRadius: 8, shadowOffset: { width: 0, height: 2 }, elevation: 3 }}
+          style={{ position: 'absolute', top: 65, right: 24, zIndex: 10, borderRadius: 22, padding: 8, shadowColor: '#4B6C4B', shadowOpacity: 0.13, shadowRadius: 8, shadowOffset: { width: 0, height: 2 }, elevation: 3 }}
           onPress={handleRefresh}
           activeOpacity={0.7}
           accessibilityLabel="Sayfayı yenile"
@@ -485,7 +485,7 @@ export default function Kalori() {
     <LinearGradient colors={["#F8FAF7", "#E6F0E6"]} style={{ flex: 1 }}>
       {/* Sağ üstte yenileme butonu */}
       <TouchableOpacity
-        style={{ position: 'absolute', top: 44, right: 24, zIndex: 10, backgroundColor: '#fff', borderRadius: 22, padding: 8, shadowColor: '#4B6C4B', shadowOpacity: 0.13, shadowRadius: 8, shadowOffset: { width: 0, height: 2 }, elevation: 3 }}
+        style={{ position: 'absolute', top: 65, right: 24, zIndex: 10, borderRadius: 22, padding: 8, shadowColor: '#4B6C4B', shadowOpacity: 0.13, shadowRadius: 8, shadowOffset: { width: 0, height: 2 }, elevation: 3 }}
         onPress={handleRefresh}
         activeOpacity={0.7}
         accessibilityLabel="Sayfayı yenile"

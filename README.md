@@ -176,8 +176,9 @@ DiyetApp/
 │   │   ├── Kalori.tsx     # Kalori analizi
 │   │   ├── Chatbot.tsx    # AI asistan
 │   │   └── Takvim.tsx     # Diyet takvimi
+│   ├── index.tsx          # Kullanıcı giriş ekranı (Ana giriş)
 │   ├── Profile.tsx        # Profil sayfası
-│   ├── GirisScreen.js     # Giriş ekranı
+│   ├── DieticianLogin.js  # Diyetisyen giriş ekranı
 │   └── Register.tsx       # Kayıt ekranı
 ├── components/            # Yeniden kullanılabilir bileşenler
 ├── services/             # API servisleri

@@ -26,6 +26,9 @@ export default function ChatbotScreen() {
   const [clients, setClients] = useState<any[]>([]);
   const [selectedClient, setSelectedClient] = useState<any>(null);
   const [showClientModal, setShowClientModal] = useState(false);
+  
+  // Kullanıcı profil bilgileri
+  const [currentUser, setCurrentUser] = useState<any>(null);
   const [dietPlanModalVisible, setDietPlanModalVisible] = useState(false);
   const [generatedDietPlan, setGeneratedDietPlan] = useState<string>('');
   const [dietPlanLoading, setDietPlanLoading] = useState(false);
@@ -53,10 +56,21 @@ export default function ChatbotScreen() {
   const checkUserType = async () => {
     try {
       const currentDiyetisyen = await AsyncStorage.getItem('currentDiyetisyen');
+      const currentUserData = await AsyncStorage.getItem('currentUser');
       const userType = await AsyncStorage.getItem('userType');
       
       console.log('currentDiyetisyen:', currentDiyetisyen);
+      console.log('currentUser:', currentUserData);
       console.log('userType:', userType);
+      
+      // Kullanıcı bilgilerini al
+      if (currentUserData) {
+        const userData = JSON.parse(currentUserData);
+        setCurrentUser(userData);
+      } else if (currentDiyetisyen) {
+        const diyetisyenData = JSON.parse(currentDiyetisyen);
+        setCurrentUser(diyetisyenData);
+      }
       
       if (currentDiyetisyen && userType === 'dietician') {
         const diyetisyenData = JSON.parse(currentDiyetisyen);
@@ -475,7 +489,15 @@ Akşam Yemeği:
             <View key={idx} style={[styles.messageRow, msg.role === 'user' ? styles.messageRowUser : styles.messageRowModel]}> 
               {msg.role === 'user' ? (
                 <View style={[styles.avatarCircle, styles.avatarUser]}> 
-                  <Ionicons name={'person'} size={28} color={'#fff'} />
+                  {currentUser?.profil_foto ? (
+                    <Image 
+                      source={{ uri: currentUser.profil_foto }} 
+                      style={styles.userAvatarImg}
+                      resizeMode="cover"
+                    />
+                  ) : (
+                    <Ionicons name={'person'} size={28} color={'#fff'} />
+                  )}
                 </View>
               ) : (
                 <View style={[styles.avatarCircle, styles.avatarModel]}> 
@@ -817,6 +839,12 @@ const styles = StyleSheet.create({
     height: 28,
     borderRadius: 14,
     resizeMode: 'contain',
+  },
+  userAvatarImg: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    resizeMode: 'cover',
   },
   messageBubble: {
     maxWidth: '80%',

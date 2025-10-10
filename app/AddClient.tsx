@@ -2,7 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { Alert, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Alert, KeyboardAvoidingView, Platform, SafeAreaView, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { useLoading } from '../contexts/LoadingContext';
 import { supabase } from '../supabaseClient';
 
@@ -32,7 +32,7 @@ export default function AddClientScreen() {
       if (!currentDiyetisyen || userType !== 'dietician') {
         setShowLoading(false);
         setLoading(false);
-        router.replace('/GirisScreen');
+        router.replace('/');
         return;
       }
       
@@ -164,7 +164,8 @@ export default function AddClientScreen() {
   }
 
   return (
-    <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined} keyboardVerticalOffset={Platform.OS === 'ios' ? 60 : 0}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: '#f0f2f5' }}>
+      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined} keyboardVerticalOffset={Platform.OS === 'ios' ? 60 : 0}>
       <ScrollView
         style={styles.container}
         contentContainerStyle={styles.contentContainer}
@@ -332,7 +333,8 @@ export default function AddClientScreen() {
           </Text>
         </View>
       </ScrollView>
-    </KeyboardAvoidingView>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 }
 

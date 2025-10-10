@@ -1,9 +1,11 @@
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { launchCameraAsync, launchImageLibraryAsync, MediaTypeOptions, requestCameraPermissionsAsync, requestMediaLibraryPermissionsAsync } from 'expo-image-picker';
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { Alert, KeyboardAvoidingView, Modal, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Alert, Image, KeyboardAvoidingView, Modal, Platform, SafeAreaView, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { useLoading } from '../contexts/LoadingContext';
+import { supabase } from '../supabaseClient';
 
 export default function ProfileScreen() {
   const router = useRouter();
@@ -24,6 +26,7 @@ export default function ProfileScreen() {
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [passwordLoading, setPasswordLoading] = useState(false);
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
 
   useEffect(() => {
     const fetchUser = async () => {
@@ -34,7 +37,7 @@ export default function ProfileScreen() {
       if (!currentUser && !currentDiyetisyen) {
         setShowLoading(false);
         setLoading(false);
-        router.replace('/GirisScreen');
+        router.replace('/');
         return;
       }
       
@@ -93,7 +96,7 @@ export default function ProfileScreen() {
             await AsyncStorage.removeItem('currentUser');
             await AsyncStorage.removeItem('currentDiyetisyen');
             await AsyncStorage.removeItem('userType');
-            router.replace('/GirisScreen');
+            router.replace('/');
           }
         },
       ]
@@ -183,6 +186,120 @@ export default function ProfileScreen() {
     Alert.alert('Başarılı', 'Şifreniz güncellendi!');
   };
 
+  const handlePhotoUpload = async () => {
+    Alert.alert(
+      'Profil Fotoğrafı',
+      'Fotoğraf seçmek için bir seçenek belirleyin',
+      [
+        { text: 'İptal', style: 'cancel' },
+        { 
+          text: 'Kameradan Çek', 
+          onPress: () => selectImage('camera')
+        },
+        { 
+          text: 'Galeriden Seç', 
+          onPress: () => selectImage('library')
+        },
+      ]
+    );
+  };
+
+  const selectImage = async (source: 'camera' | 'library') => {
+    try {
+      setUploadingPhoto(true);
+      
+      // İzin iste
+      const permissionResult = source === 'camera' 
+        ? await requestCameraPermissionsAsync()
+        : await requestMediaLibraryPermissionsAsync();
+      
+      if (permissionResult.granted === false) {
+        Alert.alert('İzin Gerekli', 'Kamera/galeri erişimi için izin gereklidir.');
+        return;
+      }
+
+      // Fotoğraf seç
+      const result = source === 'camera'
+        ? await launchCameraAsync({
+            mediaTypes: MediaTypeOptions.Images,
+            allowsEditing: true,
+            aspect: [1, 1],
+            quality: 0.8,
+          })
+        : await launchImageLibraryAsync({
+            mediaTypes: MediaTypeOptions.Images,
+            allowsEditing: true,
+            aspect: [1, 1],
+            quality: 0.8,
+          });
+
+      if (result.canceled || !result.assets[0]) {
+        setUploadingPhoto(false);
+        return;
+      }
+
+      const imageUri = result.assets[0].uri;
+      
+      // Geçici olarak test URL kullan (storage bucket kurulumu için)
+      // TODO: Supabase storage bucket kurulduktan sonra bu kısmı aktif et
+      const testUrl = imageUri; // Şimdilik local URI kullan
+      
+      // Supabase storage upload (şimdilik devre dışı)
+      /*
+      const fileName = `${user?.id}_${Date.now()}.jpg`;
+      const filePath = `profil_foto/${fileName}`;
+      
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from('profil_foto')
+        .upload(filePath, {
+          uri: imageUri,
+          type: 'image/jpeg',
+          name: fileName,
+        } as any, {
+          contentType: 'image/jpeg',
+          upsert: true
+        });
+
+      if (uploadError) {
+        console.error('Upload error:', uploadError);
+        Alert.alert('Hata', 'Fotoğraf yüklenirken bir hata oluştu: ' + uploadError.message);
+        return;
+      }
+
+      const { data: urlData } = supabase.storage
+        .from('profil_foto')
+        .getPublicUrl(filePath);
+
+      const publicUrl = urlData.publicUrl;
+      */
+      
+      // Veritabanını güncelle (test URL ile)
+      const { error: dbError } = await supabase
+        .from('users')
+        .update({ profil_foto: testUrl })
+        .eq('id', user.id);
+        
+      if (dbError) {
+        Alert.alert('Hata', 'Veritabanı güncellenirken bir hata oluştu: ' + dbError.message);
+        return;
+      }
+      
+      // Local state'i güncelle
+      const updatedUser = { ...user, profil_foto: testUrl };
+      setUser(updatedUser);
+      setProfilePhoto(testUrl);
+      await AsyncStorage.setItem('currentUser', JSON.stringify(updatedUser));
+      
+      Alert.alert('Başarılı', 'Profil fotoğrafınız güncellendi!');
+      
+    } catch (error) {
+      console.error('Photo upload error:', error);
+      Alert.alert('Hata', 'Fotoğraf yüklenirken bir hata oluştu.');
+    } finally {
+      setUploadingPhoto(false);
+    }
+  };
+
   if (loading || showLoading) {
     return (
       <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#f0f2f5' }}>
@@ -198,7 +315,7 @@ export default function ProfileScreen() {
   };
 
   return (
-    <>
+    <SafeAreaView style={{ flex: 1, backgroundColor: '#f0f2f5' }}>
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined} keyboardVerticalOffset={Platform.OS === 'ios' ? 60 : 0}>
         <ScrollView
           style={styles.container}
@@ -206,9 +323,34 @@ export default function ProfileScreen() {
           keyboardShouldPersistTaps="handled"
         >
           <View style={styles.header}>
-            <View style={styles.avatarContainer}>
-              <Text style={styles.avatarText}>{getInitials(isim)}</Text>
-            </View>
+            <TouchableOpacity 
+              style={styles.avatarContainer} 
+              onPress={handlePhotoUpload}
+              disabled={uploadingPhoto}
+            >
+              {profilePhoto ? (
+                <Image 
+                  source={{ uri: profilePhoto }} 
+                  style={styles.avatarImage}
+                  resizeMode="cover"
+                />
+              ) : (
+                <Text style={styles.avatarText}>{getInitials(isim)}</Text>
+              )}
+              {uploadingPhoto && (
+                <View style={styles.uploadingOverlay}>
+                  <Text style={styles.uploadingText}>Yükleniyor...</Text>
+                </View>
+              )}
+            </TouchableOpacity>
+            <TouchableOpacity 
+              style={styles.changePhotoButton}
+              onPress={handlePhotoUpload}
+              disabled={uploadingPhoto}
+            >
+              <Ionicons name="camera-outline" size={16} color="#4B6C4B" />
+              <Text style={styles.changePhotoText}>Fotoğraf Değiştir</Text>
+            </TouchableOpacity>
           </View>
 
           <View style={styles.formContainer}>
@@ -271,33 +413,59 @@ export default function ProfileScreen() {
               <Text style={[styles.buttonText, {color: '#4B6C4B'}]}>Şifreyi Değiştir</Text>
             </TouchableOpacity>
             {showPasswordSection && (
-              <View style={{ width: '100%', backgroundColor: '#F6F7FB', borderRadius: 12, padding: 16, marginTop: 10 }}>
-                <Text style={{ color: '#4B6C4B', fontWeight: 'bold', fontSize: 16, marginBottom: 10 }}>Şifre Değiştir</Text>
-                <TextInput
-                  style={{ borderWidth: 1, borderColor: '#4B6C4B', borderRadius: 8, padding: 8, fontSize: 15, marginBottom: 8, color: '#333' }}
-                  placeholder="Mevcut Şifre"
-                  placeholderTextColor="#999"
-                  value={currentPassword}
-                  onChangeText={setCurrentPassword}
-                  secureTextEntry
-                />
-                <TextInput
-                  style={{ borderWidth: 1, borderColor: '#4B6C4B', borderRadius: 8, padding: 8, fontSize: 15, marginBottom: 8, color: '#333' }}
-                  placeholder="Yeni Şifre"
-                  placeholderTextColor="#999"
-                  value={newPassword}
-                  onChangeText={setNewPassword}
-                  secureTextEntry
-                />
-                <TextInput
-                  style={{ borderWidth: 1, borderColor: '#4B6C4B', borderRadius: 8, padding: 8, fontSize: 15, marginBottom: 8, color: '#333' }}
-                  placeholder="Yeni Şifre (Tekrar)"
-                  placeholderTextColor="#999"
-                  value={confirmPassword}
-                  onChangeText={setConfirmPassword}
-                  secureTextEntry
-                />
-                <TouchableOpacity style={[styles.saveButton, { marginTop: 8, backgroundColor: '#4B6C4B', flexDirection: 'row', justifyContent: 'center', alignItems: 'center' }]} onPress={handlePasswordChange} disabled={passwordLoading}>
+              <View style={styles.passwordSection}>
+                <Text style={styles.passwordSectionTitle}>Şifre Değiştir</Text>
+                
+                <View style={styles.inputGroup}>
+                  <Text style={styles.label}>Mevcut Şifre</Text>
+                  <View style={styles.inputContainer}>
+                    <Ionicons name="lock-closed-outline" style={styles.inputIcon} />
+                    <TextInput 
+                      style={styles.input} 
+                      placeholder="Mevcut şifrenizi girin" 
+                      placeholderTextColor="#999" 
+                      value={currentPassword}
+                      onChangeText={setCurrentPassword}
+                      secureTextEntry
+                    />
+                  </View>
+                </View>
+
+                <View style={styles.inputGroup}>
+                  <Text style={styles.label}>Yeni Şifre</Text>
+                  <View style={styles.inputContainer}>
+                    <Ionicons name="lock-closed-outline" style={styles.inputIcon} />
+                    <TextInput 
+                      style={styles.input} 
+                      placeholder="Yeni şifrenizi girin" 
+                      placeholderTextColor="#999" 
+                      value={newPassword}
+                      onChangeText={setNewPassword}
+                      secureTextEntry
+                    />
+                  </View>
+                </View>
+
+                <View style={styles.inputGroup}>
+                  <Text style={styles.label}>Yeni Şifre (Tekrar)</Text>
+                  <View style={styles.inputContainer}>
+                    <Ionicons name="lock-closed-outline" style={styles.inputIcon} />
+                    <TextInput 
+                      style={styles.input} 
+                      placeholder="Yeni şifrenizi tekrar girin" 
+                      placeholderTextColor="#999" 
+                      value={confirmPassword}
+                      onChangeText={setConfirmPassword}
+                      secureTextEntry
+                    />
+                  </View>
+                </View>
+
+                <TouchableOpacity 
+                  style={[styles.saveButton, styles.passwordSaveButton]} 
+                  onPress={handlePasswordChange} 
+                  disabled={passwordLoading}
+                >
                   <Ionicons name="checkmark-outline" size={20} color="#fff" />
                   <Text style={styles.buttonText}>Şifreyi Kaydet</Text>
                 </TouchableOpacity>
@@ -356,7 +524,7 @@ export default function ProfileScreen() {
           </View>
         </Modal>
       </KeyboardAvoidingView>
-    </>
+    </SafeAreaView>
   );
 }
 
@@ -370,8 +538,8 @@ const styles = StyleSheet.create({
   },
   header: {
     backgroundColor: '#4B6C4B',
-    paddingTop: 20,
-    paddingBottom: 40,
+    paddingTop: -20,
+    paddingBottom: 30,
     alignItems: 'center',
     borderBottomLeftRadius: 30,
     borderBottomRightRadius: 30,
@@ -396,7 +564,7 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     padding: 25,
     marginHorizontal: 20,
-    marginTop: -20, // azaltıldı
+    marginTop: -10,
     shadowColor: '#4B6C4B',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.07,
@@ -474,5 +642,73 @@ const styles = StyleSheet.create({
   },
   logoutButtonText: {
     color: '#4B6C4B',
+  },
+  // Şifre bölümü stilleri
+  passwordSection: {
+    width: '100%',
+    backgroundColor: '#fff',
+    borderRadius: 20,
+    padding: 25,
+    marginTop: 15,
+    shadowColor: '#4B6C4B',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.07,
+    shadowRadius: 8,
+    elevation: 2,
+    borderWidth: 1,
+    borderColor: 'rgba(75, 108, 75, 0.1)',
+  },
+  passwordSectionTitle: {
+    color: '#4B6C4B',
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginBottom: 20,
+    textAlign: 'center',
+  },
+  passwordSaveButton: {
+    marginTop: 10,
+    backgroundColor: '#4B6C4B',
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  // Avatar ve fotoğraf stilleri
+  avatarImage: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+  },
+  uploadingOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    borderRadius: 50,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  uploadingText: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: 'bold',
+  },
+  changePhotoButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
+    marginTop: 10,
+    borderWidth: 1,
+    borderColor: 'rgba(75, 108, 75, 0.3)',
+  },
+  changePhotoText: {
+    color: '#4B6C4B',
+    fontSize: 12,
+    fontWeight: '600',
+    marginLeft: 4,
   },
 }); 

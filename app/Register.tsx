@@ -1,11 +1,12 @@
 import { Ionicons } from '@expo/vector-icons';
-import { Stack, useRouter } from 'expo-router';
+import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import {
     Alert,
     Image,
     KeyboardAvoidingView,
     Platform,
+    SafeAreaView,
     ScrollView,
     StyleSheet,
     Text,
@@ -124,20 +125,14 @@ export default function RegisterScreen() {
 
     console.log('Kayıt başarılı!');
     Alert.alert('Başarılı', 'Kayıt başarılı! Giriş yapabilirsiniz.', [
-      { text: 'Tamam', onPress: () => router.replace('/GirisScreen') }
+      { text: 'Tamam', onPress: () => router.replace('/') }
     ]);
   };
 
   return (
-    <>
-      <Stack.Screen
-        options={{
-          title: 'Kayıt Ol',
-          headerBackTitle: 'Giriş Yap',
-        }}
-      />
+    <SafeAreaView style={{ flex: 1, backgroundColor: '#fff' }}>
       <KeyboardAvoidingView
-        style={{ flex: 1, backgroundColor: '#fff' }}
+        style={{ flex: 1 }}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
         <ScrollView
@@ -239,7 +234,7 @@ export default function RegisterScreen() {
           </TouchableOpacity>
         </ScrollView>
       </KeyboardAvoidingView>
-    </>
+    </SafeAreaView>
   );
 }
 
