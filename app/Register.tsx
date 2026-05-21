@@ -2,17 +2,17 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import {
-  Alert,
-  Image,
-  KeyboardAvoidingView,
-  Platform,
-  SafeAreaView,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View
+    Alert,
+    Image,
+    KeyboardAvoidingView,
+    Platform,
+    SafeAreaView,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View
 } from 'react-native';
 import { supabase } from '../supabaseClient';
 
@@ -32,10 +32,10 @@ export default function RegisterScreen() {
   const formatPhone = (text: string) => {
     // Remove all non-digit characters
     const cleaned = text.replace(/\D/g, '');
-
+    
     // Limit to 11 digits
     const limited = cleaned.slice(0, 11);
-
+    
     // Format the phone number
     let formatted = limited;
     if (limited.length > 0) {
@@ -43,7 +43,7 @@ export default function RegisterScreen() {
       if (!limited.startsWith('0')) {
         formatted = '0' + limited;
       }
-
+      
       // Add spaces for formatting
       if (formatted.length > 4) {
         formatted = formatted.slice(0, 4) + ' ' + formatted.slice(4);
@@ -52,7 +52,7 @@ export default function RegisterScreen() {
         formatted = formatted.slice(0, 8) + ' ' + formatted.slice(8);
       }
     }
-
+    
     return formatted;
   };
 
@@ -147,7 +147,7 @@ export default function RegisterScreen() {
             <Ionicons name="person-outline" size={22} color="#6C6C6C" style={styles.inputIcon} />
             <TextInput style={styles.input} placeholder="İsim" placeholderTextColor="#999" value={isim} onChangeText={setIsim} />
           </View>
-
+          
           <View style={styles.inputContainer}>
             <Ionicons name="person-outline" size={22} color="#6C6C6C" style={styles.inputIcon} />
             <TextInput style={styles.input} placeholder="Soyisim" placeholderTextColor="#999" value={soyisim} onChangeText={setSoyisim} />
@@ -169,7 +169,7 @@ export default function RegisterScreen() {
               keyboardType="number-pad"
             />
           </View>
-
+          
           <View style={styles.inputContainer}>
             <Ionicons name="lock-closed-outline" size={22} color="#6C6C6C" style={styles.inputIcon} />
             <TextInput style={styles.input} placeholder="Şifre" placeholderTextColor="#999" value={sifre} onChangeText={setSifre} secureTextEntry={!isPasswordVisible} />
@@ -214,7 +214,7 @@ export default function RegisterScreen() {
               maxLength={3}
             />
           </View>
-          <View style={[styles.inputContainer, { justifyContent: 'flex-start' }]}>
+          <View style={[styles.inputContainer, { justifyContent: 'flex-start' }]}> 
             <Ionicons name="male-female-outline" size={22} color="#6C6C6C" style={styles.inputIcon} />
             <TouchableOpacity
               style={[styles.genderButton, cinsiyet === 'erkek' && styles.genderButtonSelected]}

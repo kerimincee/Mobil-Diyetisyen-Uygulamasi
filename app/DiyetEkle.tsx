@@ -51,30 +51,30 @@ export default function DiyetEkle() {
     try {
       const currentUser = await AsyncStorage.getItem('currentUser');
       console.log('AsyncStorage currentUser:', currentUser);
-
+      
       if (!currentUser) {
         Alert.alert('Giriş Gerekli', 'Diyet planı eklemek için önce giriş yapmalısınız.', [
           { text: 'Tamam', onPress: () => router.replace('/(tabs)') }
         ]);
         return;
       }
-
+      
       const userData = JSON.parse(currentUser);
       console.log('User data:', userData);
-
+      
       if (!userData.id) {
         Alert.alert('Kullanıcı Bilgisi Eksik', 'Kullanıcı bilgileriniz eksik. Lütfen tekrar giriş yapın.', [
           { text: 'Tamam', onPress: () => router.replace('/(tabs)') }
         ]);
         return;
       }
-
+      
       console.log('Diyet planı ekleniyor:', {
         user_id: userData.id,
         date,
         form
       });
-
+      
       await addDietPlan({
         user_id: userData.id, // UUID'yi user_id olarak kullan
         date,
@@ -102,13 +102,13 @@ export default function DiyetEkle() {
       <ScrollView contentContainerStyle={styles.container} showsVerticalScrollIndicator={false}>
         <Text style={styles.title}>🎯 Yeni Diyet Planı Ekle</Text>
         <Text style={styles.subtitle}>Her gün için sağlıklı ve eğlenceli bir plan oluştur!</Text>
-
+        
         {!isLoggedIn && (
           <View style={styles.warningBox}>
             <Ionicons name="warning" size={24} color="#FF6B6B" style={{ marginRight: 10 }} />
             <Text style={styles.warningText}>Diyet planı eklemek için önce giriş yapmalısınız!</Text>
-            <TouchableOpacity
-              style={styles.loginButton}
+            <TouchableOpacity 
+              style={styles.loginButton} 
               onPress={() => router.replace('/(tabs)')}
               activeOpacity={0.8}
             >

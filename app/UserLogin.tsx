@@ -66,7 +66,7 @@ export default function UserLoginScreen() {
           title: 'Kullanıcı Girişi',
           headerBackTitle: 'Geri',
           headerRight: () => (
-            <TouchableOpacity
+            <TouchableOpacity 
               onPress={() => router.push('/DieticianLogin' as any)}
               style={{ marginRight: 15 }}
             >
@@ -114,21 +114,21 @@ export default function UserLoginScreen() {
               <Ionicons name={isPasswordVisible ? "eye-off-outline" : "eye-outline"} size={22} color="#6C6C6C" />
             </TouchableOpacity>
           </View>
-
+          
           <View style={{ flexDirection: 'row', alignItems: 'center', alignSelf: 'flex-start', marginLeft: 15, marginBottom: 5 }}>
             <TouchableOpacity onPress={() => setRememberMe(!rememberMe)} style={{ marginRight: 8 }}>
               <Ionicons name={rememberMe ? 'checkbox' : 'square-outline'} size={22} color="#007AFF" />
             </TouchableOpacity>
             <Text style={{ color: '#333', fontSize: 16 }}>Beni Hatırla</Text>
           </View>
-
+          
           <TouchableOpacity style={styles.button} onPress={handleLogin}>
             <Text style={styles.buttonText}>Giriş Yap</Text>
           </TouchableOpacity>
-
+          
           <TouchableOpacity onPress={() => router.push('/Register' as any)}>
             <Text style={styles.registerText}>
-              Hesabın yok mu? <Text style={{ fontWeight: 'bold' }}>Kayıt ol</Text>
+              Hesabın yok mu? <Text style={{fontWeight: 'bold'}}>Kayıt ol</Text>
             </Text>
           </TouchableOpacity>
 

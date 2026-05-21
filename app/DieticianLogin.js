@@ -48,27 +48,27 @@ export default function DieticianLoginScreen() {
 
     try {
       const loginResult = await checkDiyetisyenLogin(email, password);
-
+      
       if (loginResult === 'no-user') {
         alert('E-posta veya şifre yanlış.');
         return;
       }
-
+      
       if (loginResult === 'wrong-password') {
         alert('E-posta veya şifre yanlış.');
         return;
       }
-
+      
       if (loginResult === 'inactive') {
         alert('Lisansınız bitmiştir. Lütfen yönetici ile iletişime geçin.');
         return;
       }
-
+      
       if (loginResult === 'not-approved') {
         alert('Hesabınız henüz onaylanmamış. Lütfen yönetici ile iletişime geçin.');
         return;
       }
-
+      
       if (loginResult === 'error') {
         alert('Giriş yapılırken bir hata oluştu.');
         return;
@@ -145,21 +145,21 @@ export default function DieticianLoginScreen() {
               <Ionicons name={isPasswordVisible ? "eye-off-outline" : "eye-outline"} size={22} color="#6C6C6C" />
             </TouchableOpacity>
           </View>
-
+          
           <View style={{ flexDirection: 'row', alignItems: 'center', alignSelf: 'flex-start', marginLeft: 15, marginBottom: 5 }}>
             <TouchableOpacity onPress={() => setRememberMe(!rememberMe)} style={{ marginRight: 8 }}>
               <Ionicons name={rememberMe ? 'checkbox' : 'square-outline'} size={22} color="#007AFF" />
             </TouchableOpacity>
             <Text style={{ color: '#333', fontSize: 16 }}>Beni Hatırla</Text>
           </View>
-
+          
           <TouchableOpacity style={styles.button} onPress={handleLogin}>
             <Text style={styles.buttonText}>Giriş Yap</Text>
           </TouchableOpacity>
-
+          
           <TouchableOpacity onPress={() => setContactModalVisible(true)}>
             <Text style={styles.registerText}>
-              Diyetisyen misiniz? <Text style={{ fontWeight: 'bold' }}>Kayıt ol</Text>
+              Diyetisyen misiniz? <Text style={{fontWeight: 'bold'}}>Kayıt ol</Text>
             </Text>
           </TouchableOpacity>
 
